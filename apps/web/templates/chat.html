@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="chat-page-wrapper">
+  <div class="chat-header-new">
+    <div class="chat-header-info">
+      <h1>Chat with AI Assistant</h1>
+      <p>{{ proposal.contractor }} • RFP {{ proposal.rfp_id }}</p>
+    </div>
+    <a class="button secondary" href="/rfps/{{ proposal.rfp_id }}">← Back to RFP</a>
+  </div>
+
+  <div class="chat-main-card">
+    <div class="chat-history-container" id="chat-messages">
+      <div class="chat-welcome" id="chat-welcome">
+        <h3>💬 Ask me anything about this proposal</h3>
+        <p>I can help you understand the details, compare requirements, or answer specific questions.</p>
+      </div>
+    </div>
+
+    <div class="chat-input-section">
+      <form id="chat-form" data-proposal-id="{{ proposal.id }}">
+        <div class="chat-input-box">
+          <textarea name="message" id="chat-input"
+            placeholder="Ask about pricing, timeline, qualifications, or any other details..." rows="1"
+            required></textarea>
+          <button type="submit" class="chat-send-btn" id="send-button">
+            <span>Send</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<script>
+  // Configure marked for better markdown rendering
+  marked.setOptions({
+    breaks: true,
+    gfm: true
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const chatForm = document.getElementById('chat-form');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
+    const proposalId = chatForm.dataset.proposalId;
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+
+    // Handle Enter key (Shift+Enter for new line)
+    chatInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    // Add message to chat
+    function addMessage(content, isUser = false) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `message-wrapper ${isUser ? 'user' : 'ai'}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = `message-bubble ${isUser ? 'user-message' : 'ai-message'}`;
+
+      if (isUser) {
+        bubble.textContent = content;
+      } else {
+        // Render markdown for AI messages
+        bubble.innerHTML = marked.parse(content);
+      }
+
+      wrapper.appendChild(bubble);
+      chatMessages.appendChild(wrapper);
+
+      // Scroll to bottom
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Show typing indicator
+    function showTypingIndicator() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-wrapper ai';
+      wrapper.id = 'typing-indicator-wrapper';
+
+      const indicator = document.createElement('div');
+      indicator.className = 'typing-indicator';
+      indicator.innerHTML = '<span></span><span></span><span></span>';
+
+      wrapper.appendChild(indicator);
+      chatMessages.appendChild(wrapper);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Remove typing indicator
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typing-indicator-wrapper');
+      if (indicator) {
+        indicator.remove();
+      }
+    }
+
+    // Handle form submission
+    chatForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      // Remove welcome message on first interaction
+      const welcomeMsg = document.getElementById('chat-welcome');
+      if (welcomeMsg) {
+        welcomeMsg.remove();
+      }
+
+      // Disable input while processing
+      chatInput.disabled = true;
+      sendButton.disabled = true;
+
+      // Add user message
+      addMessage(message, true);
+
+      // Clear input
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+
+      // Show typing indicator
+      showTypingIndicator();
+
+      try {
+        const response = await fetch(`/api/proposals/${proposalId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proposal_id: proposalId, message: message })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get response');
+        }
+
+        const data = await response.json();
+
+        // Remove typing indicator
+        removeTypingIndicator();
+
+        // Add AI response
+        addMessage(data.reply, false);
+
+      } catch (error) {
+        console.error('Chat error:', error);
+        removeTypingIndicator();
+        addMessage('Sorry, I encountered an error. Please try again.', false);
+      } finally {
+        // Re-enable input
+        chatInput.disabled = false;
+        sendButton.disabled = false;
+        chatInput.focus();
+      }
+    });
+
+    // Focus input on load
+    chatInput.focus();
+  });
+</script>
+{% endblock %}

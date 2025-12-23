@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js"></script>
+
+<section class="page-header">
+  <div>
+    <h1>Proposal Comparison</h1>
+    <p class="muted">Analysis for RFP {{ comparison.rfp_id }}</p>
+  </div>
+  <a class="button secondary" href="/rfps/{{ comparison.rfp_id }}">← Back to RFP</a>
+</section>
+
+{% if comparison.rows %}
+
+<div class="row" style="margin-bottom: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+
+  <!-- Chart 1: Radar (Spider Web) -->
+  <section class="card" style="min-height: 400px; display: flex; flex-direction: column;">
+    <h3>Attribute Analysis</h3>
+    <div id="radarChart" style="flex: 1;"></div>
+  </section>
+
+  <!-- Chart 2: Slope Graph (Rankings) -->
+  <section class="card" style="min-height: 400px; display: flex; flex-direction: column;">
+    <h3>Value Efficiency (Rank Comparison)</h3>
+    <p class="muted" style="font-size: 0.85rem;">Comparing Price Rank vs Score Rank (Lower is Better)</p>
+    <div id="slopeChart" style="flex: 1;"></div>
+  </section>
+
+</div>
+
+<!-- Chart 3: Dynamic Bar Chart with Buttons -->
+<section class="card" style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h3>Category Comparison</h3>
+    <div class="chart-controls" style="display: flex; gap: 0.5rem;">
+      <button class="button sm secondary active" onclick="updateBarChart('financial')">Financials (Price vs
+        Score)</button>
+      <button class="button sm secondary" onclick="updateBarChart('technical')">Technical (Scope vs Clarity)</button>
+      <button class="button sm secondary" onclick="updateBarChart('execution')">Execution (Schedule vs
+        Coverage)</button>
+    </div>
+  </div>
+  <div id="barChart" style="min-height: 400px;"></div>
+</section>
+
+<section class="card">
+  <h3>Detailed Breakdown</h3>
+  <div style="overflow-x: auto;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Contractor</th>
+          <th>Overall Score</th>
+          <th>Price</th>
+          <th>Experience</th>
+          <th>Methodology</th>
+          <th>Timeline</th>
+          <th>Risk</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in comparison.rows %}
+        <tr>
+          <td>
+            <strong>{{ row.contractor }}</strong>
+            {% if row.overall_score is not none %}
+            <br><small class="muted">Coverage: {{ row.coverage }}%</small>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.overall_score is not none %}
+            <span
+              class="badge {{ 'reviewed' if row.overall_score > 70 else ('submitted' if row.overall_score > 50 else 'rejected') }}">
+              {{ row.overall_score | round(1) }} / 100
+            </span>
+            {% else %}
+            <span class="badge pending">Pending AI</span>
+            {% endif %}
+          </td>
+          <td>{{ row.price or "n/a" }} USD</td>
+          <td>
+            <small>{{ row.experience or "n/a" }}</small>
+          </td>
+          <td>
+            <small>{{ row.methodology or "n/a" }}</small>
+          </td>
+          <td>
+            <small>{{ row.timeline_details or "n/a" }}</small>
+          </td>
+          <td>
+            {% if row.risk %}
+            <span
+              class="badge {{ 'rejected' if row.risk|lower == 'high' else ('submitted' if row.risk|lower == 'medium' else 'reviewed') }}">
+              {{ row.risk }}
+            </span>
+            {% else %}
+            <span class="badge pending">Unknown</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="flex-row" style="gap: 0.5rem;">
+              <button class="button sm secondary view-details-btn" data-proposal-id="{{ row.proposal_id }}"
+                data-contractor="{{ row.contractor }}" data-price="{{ row.price or 'N/A' }}"
+                data-start-date="{{ row.start_date or 'N/A' }}" data-timeline="{{ row.timeline_details or 'N/A' }}"
+                data-experience="{{ row.experience or 'N/A' }}" data-methodology="{{ row.methodology or 'N/A' }}"
+                data-warranties="{{ row.warranties or 'N/A' }}"
+                data-summary="{{ row.summary or 'N/A' }}">Details</button>
+              <a href="/proposals/{{ row.proposal_id }}/chat" class="button sm">Chat</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script id="comparison-data" type="application/json">
+  [
+    {% for row in comparison.rows %}
+    {
+      "contractor": {{ row.contractor | tojson }},
+      "overall": {{ (row.overall_score or 0) | tojson }},
+      "price": {{ (row.price or 0) | tojson }},
+      "coverage": {{ (row.coverage or 0) | tojson }},
+      "risk": {{ row.risk | tojson }},
+      "scope_score": {{ (row.scope_score or (row.overall_score or 0)) | tojson }},
+      "clarity_score": {{ (row.clarity_score or (row.overall_score or 0)) | tojson }},
+      "schedule_score": {{ (row.schedule_score or (row.overall_score or 0)) | tojson }}
+    }{{ "," if not loop.last }}
+    {% endfor %}
+  ]
+</script>
+
+<script>
+  let barChart = null;
+  let rows = [];
+  const palette = ['#1e3a8a', '#14b8a6', '#6366f1', '#64748b', '#06b6d4'];
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const rawData = document.getElementById('comparison-data').textContent;
+    rows = JSON.parse(rawData);
+
+    initRadarChart();
+    initSlopeChart();
+    updateBarChart('financial');
+  });
+
+  function initRadarChart() {
+    const series = rows.map(r => {
+      return {
+        name: r.contractor,
+        data: [
+          r.overall,
+          r.coverage,
+          r.scope_score || r.overall,
+          r.schedule_score || r.overall,
+          r.clarity_score || r.overall
+        ]
+      };
+    });
+
+    const options = {
+      series: series,
+      chart: {
+        height: 350,
+        type: 'radar',
+        toolbar: { show: false }
+      },
+      xaxis: {
+        categories: ['Overall', 'Coverage', 'Scope', 'Schedule', 'Clarity']
+      },
+      stroke: { width: 2 },
+      fill: { opacity: 0.1 },
+      markers: { size: 3 },
+      colors: palette,
+      legend: { position: 'top' }
+    };
+    new ApexCharts(document.querySelector("#radarChart"), options).render();
+  }
+
+  function initSlopeChart() {
+    // Calculate Ranks
+    // Price: Ascending (Lower is better)
+    const sortedByPrice = [...rows].sort((a, b) => (a.price || 9999999) - (b.price || 9999999));
+    // Score: Descending (Higher is better)
+    const sortedByScore = [...rows].sort((a, b) => b.overall - a.overall);
+
+    const series = rows.map(r => {
+      const priceRank = sortedByPrice.findIndex(x => x.contractor === r.contractor) + 1;
+      const scoreRank = sortedByScore.findIndex(x => x.contractor === r.contractor) + 1;
+      return {
+        name: r.contractor,
+        data: [
+          { x: 'Price Rank', y: priceRank },
+          { x: 'Score Rank', y: scoreRank }
+        ]
+      };
+    });
+
+    const options = {
+      series: series,
+      chart: {
+        height: 350,
+        type: 'line',
+        toolbar: { show: false }
+      },
+      grid: {
+        show: true,
+        xaxis: { lines: { show: true } }
+      },
+      xaxis: {
+        categories: ['Price Rank', 'Score Rank']
+      },
+      yaxis: {
+        reversed: true, // Rank 1 at top
+        min: 1,
+        max: rows.length,
+        tickAmount: rows.length,
+        title: { text: 'Rank (1 = Best)' }
+      },
+      stroke: { width: 3, curve: 'straight' },
+      markers: { size: 5 },
+      colors: palette,
+      legend: { position: 'top' }
+    };
+    new ApexCharts(document.querySelector("#slopeChart"), options).render();
+  }
+
+  function updateBarChart(mode) {
+    if (barChart) barChart.destroy();
+
+    // Update buttons
+    document.querySelectorAll('.chart-controls button').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`button[onclick="updateBarChart('${mode}')"]`).classList.add('active');
+
+    let series = [];
+    const contractors = rows.map(r => r.contractor);
+
+    if (mode === 'financial') {
+      series = [
+        { name: 'Price ($k)', data: rows.map(r => (r.price || 0) / 1000) },
+        { name: 'Overall Score', data: rows.map(r => r.overall) }
+      ];
+    } else if (mode === 'technical') {
+      series = [
+        { name: 'Scope Score', data: rows.map(r => r.scope_score || r.overall) },
+        { name: 'Clarity Score', data: rows.map(r => r.clarity_score || r.overall) }
+      ];
+    } else { // execution
+      series = [
+        { name: 'Schedule Score', data: rows.map(r => r.schedule_score || r.overall) },
+        { name: 'Req Coverage %', data: rows.map(r => r.coverage) }
+      ];
+    }
+
+    const options = {
+      series: series,
+      chart: {
+        type: 'bar',
+        height: 350,
+        toolbar: { show: false }
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '55%',
+          dataLabels: { position: 'top' }
+        },
+      },
+      dataLabels: { enabled: false },
+      stroke: { show: true, width: 2, colors: ['transparent'] },
+      xaxis: { categories: contractors },
+      colors: [palette[0], palette[1]],
+      fill: { opacity: 1 },
+      legend: { position: 'top' }
+    };
+
+    barChart = new ApexCharts(document.querySelector("#barChart"), options);
+    barChart.render();
+  }
+</script>
+
+{% else %}
+<section class="card">
+  <p class="muted">No proposals found for this RFP. Share the RFP link to get proposals.</p>
+</section>
+{% endif %}
+
+<!-- Proposal Details Modal -->
+<div class="modal-overlay" id="proposal-modal">
+  <div class="modal">
+    <button class="modal-close"
+      onclick="document.getElementById('proposal-modal').classList.remove('active')">&times;</button>
+    <h2 id="modal-contractor-name">Proposal Details</h2>
+    <div style="margin-top: 1.5rem;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div>
+          <label class="meta-label">Contractor</label>
+          <p id="modal-contractor" class="meta-value">-</p>
+        </div>
+        <div>
+          <label class="meta-label">Price</label>
+          <p id="modal-price" class="meta-value">-</p>
+        </div>
+        <div>
+          <label class="meta-label">Start Date</label>
+          <p id="modal-start-date" class="meta-value">-</p>
+        </div>
+        <div>
+          <label class="meta-label">Timeline</label>
+          <p id="modal-timeline" class="meta-value">-</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label class="meta-label">Experience</label>
+        <p id="modal-experience" class="meta-value" style="white-space: pre-wrap;">-</p>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label class="meta-label">Methodology</label>
+        <p id="modal-methodology" class="meta-value" style="white-space: pre-wrap;">-</p>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label class="meta-label">Warranties</label>
+        <p id="modal-warranties" class="meta-value" style="white-space: pre-wrap;">-</p>
+      </div>
+
+      <div>
+        <label class="meta-label">Summary</label>
+        <p id="modal-summary" class="meta-value" style="white-space: pre-wrap;">-</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Proposal Details Modal Handler
+  document.addEventListener('DOMContentLoaded', function () {
+    const detailButtons = document.querySelectorAll('.view-details-btn');
+    const modal = document.getElementById('proposal-modal');
+
+    detailButtons.forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.getElementById('modal-contractor-name').textContent = this.dataset.contractor + ' - Proposal Details';
+        document.getElementById('modal-contractor').textContent = this.dataset.contractor;
+        document.getElementById('modal-price').textContent = this.dataset.price + ' USD';
+        document.getElementById('modal-start-date').textContent = this.dataset.startDate;
+        document.getElementById('modal-timeline').textContent = this.dataset.timeline;
+        document.getElementById('modal-experience').textContent = this.dataset.experience;
+        document.getElementById('modal-methodology').textContent = this.dataset.methodology;
+        document.getElementById('modal-warranties').textContent = this.dataset.warranties;
+        document.getElementById('modal-summary').textContent = this.dataset.summary;
+
+        modal.classList.add('active');
+      });
+    });
+
+    // Close modal on overlay click
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+  });
+</script>
+
+{% endblock %}

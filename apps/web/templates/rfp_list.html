@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>All RFPs</h1>
+    <p class="muted">Manage your Requests for Proposals</p>
+  </div>
+</section>
+
+<section class="card">
+  <h3>Active RFPs</h3>
+  {% if rfps %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Budget</th>
+        <th>Status</th>
+        <th>Deadline</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rfp in rfps %}
+      <tr>
+        <td><a href="/rfps/{{ rfp.id }}"><strong>{{ rfp.title }}</strong></a></td>
+        <td>{{ rfp.budget }} {{ rfp.currency }}</td>
+        <td>
+          <span class="badge {{ 'open' if rfp.status == 'open' else 'pending' }}">
+            {{ rfp.status }}
+          </span>
+        </td>
+        <td>{{ rfp.deadline or "n/a" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No RFPs found. Create one to get started.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Create New RFP</h3>
+  <form id="create-rfp-form">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <label>Title <input type="text" name="title" required placeholder="e.g. Office Renovation"></label>
+      <label>Deadline <input type="date" name="deadline"></label>
+    </div>
+
+    <label>Description <textarea name="description" rows="3"
+        placeholder="Brief focus of the project..."></textarea></label>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <label>Budget (Total)
+        <input type="number" name="budget" min="500" step="500" placeholder="50000" required>
+      </label>
+      <label>Currency
+        <select name="currency">
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
+          <option value="AED">AED</option>
+        </select>
+      </label>
+    </div>
+
+    <label>Key Requirements (one per line)
+      <textarea name="requirements" rows="5"
+        placeholder="- Must include warranty&#10;- Timeline under 6 months"></textarea>
+    </label>
+
+    <button type="submit" class="button">Create RFP</button>
+    <div class="form-status" id="create-rfp-status"></div>
+  </form>
+</section>
+{% endblock %}

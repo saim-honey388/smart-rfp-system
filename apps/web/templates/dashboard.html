@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="text-muted">Manage your RFPs and view proposals</p>
+  </div>
+</section>
+
+<div class="dashboard-layout">
+  <!-- Left Column: RFP List -->
+  <section class="rfp-list-section">
+    <div class="flex-row justify-between mb-4">
+      <h3 style="margin:0">Your RFPs</h3>
+      <span class="badge neutral">{{ total_rfps }} Total</span>
+    </div>
+
+
+    <!-- DEBUG: all_rfps = {{ all_rfps }} -->
+    <!-- DEBUG: all_rfps length = {{ all_rfps|length }} -->
+    {% if all_rfps %}
+    {% for item in all_rfps %}
+    {% set rfp = item.rfp %}
+    <a href="/rfps/{{ rfp.id }}" class="rfp-item">
+      <div class="rfp-header">
+        <div class="rfp-title">{{ rfp.title }}</div>
+        <span class="badge {{ 'open' if rfp.status == 'open' else 'submitted' }}">
+          {{ rfp.status }}
+        </span>
+      </div>
+      <div class="rfp-meta">
+        <div class="meta-item">
+          <span class="meta-label">Created</span>
+          <span class="meta-value">{{ rfp.created_at.strftime('%Y-%m-%d') }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Deadline</span>
+          <span class="meta-value">{{ rfp.deadline or "No deadline" }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Proposals</span>
+          <span class="meta-value">{{ item.total_proposals }}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Accepted</span>
+          <span class="meta-value">{{ item.accepted_proposals }}</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="card">
+      <p class="text-muted" style="text-align: center;">No RFPs created yet.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Right Column: Create RFP Form -->
+  <section class="create-rfp-section">
+    <h2>Create New RFP</h2>
+    <p class="text-muted">Launch a new request to get proposals from contractors.</p>
+
+    <form id="create-rfp-form">
+      <label>Title <input type="text" name="title" required placeholder="e.g. Headquarters Office Fit-out"></label>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <label>Deadline <input type="date" name="deadline"></label>
+        <label>Budget (Total)
+          <input type="number" name="budget" min="500" step="500" placeholder="50000" required>
+        </label>
+      </div>
+
+      <label>Currency
+        <select name="currency">
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
+          <option value="AED">AED</option>
+        </select>
+      </label>
+
+      <label>Description
+        <textarea name="description" rows="3" placeholder="Briefly describe the scope of work..."></textarea>
+      </label>
+
+      <label>Key Requirements (one per line)
+        <textarea name="requirements" rows="5"
+          placeholder="- Must have 5+ years experience&#10;- Must provide 3 references&#10;- Timeline must be under 6 months"></textarea>
+      </label>
+
+      <button type="submit" class="button block">Launch RFP</button>
+      <div class="form-status" id="create-rfp-status"></div>
+    </form>
+  </section>
+</div>
+{% endblock %}
