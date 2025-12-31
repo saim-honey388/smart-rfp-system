@@ -1,138 +1,116 @@
-# Smart RFP System v2.2
+<div align="center">
+  <a href="https://github.com/saim-honey388/smart-rfp-system">
+    <img src="docs/images/logo-placeholder.png" alt="Logo" width="120" height="120">
+  </a>
+
+  <h1 align="center">Smart RFP System</h1>
+
+  <p align="center">
+    <strong>AI-Powered Procurement & Proposal Management</strong>
+    <br />
+    <br />
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" /></a>
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" /></a>
+    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" /></a>
+    <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" /></a>
+    <br />
+    <br />
+    <a href="#-demo"><strong>Explore the Demo »</strong></a>
+    ·
+    <a href="WORKFLOW.md"><strong>Read Docs »</strong></a>
+    ·
+    <a href="#-feedback"><strong>Report Bug »</strong></a>
+  </p>
+</div>
+
+<br />
+
+> [!NOTE]
+> **Mission Statement**: To transform manual, error-prone procurement processes into instant, data-driven decisions using state-of-the-art AI.
 
 <div align="center">
-  <img src="docs/images/logo-placeholder.png" alt="Smart RFP Logo" width="120" />
-  <h1>Smart RFP System</h1>
-  <p><strong>AI-Powered Procurement & Proposal Management</strong></p>
-
-  <p>
-    <a href="#key-features">Features</a> •
-    <a href="#how-it-works">How It Works</a> •
-    <a href="#tech-stack">Tech Stack</a> •
-    <a href="#getting-started">Getting Started</a> •
-    <a href="WORKFLOW.md">Documentation</a>
-  </p>
-
-  <br />
-
-  <img src="docs/images/dashboard-hero.png" alt="Smart RFP Dashboard" width="800" />
+  <img src="docs/images/dashboard-hero.png" alt="Dashboard Preview" width="100%" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
 </div>
 
 ---
 
-## 💡 About The Project
+## ⚡ Why Smart RFP?
 
-**Smart RFP** is an intelligent web application designed to revolutionize the way organizations handle Request for Proposals (RFPs). By leveraging advanced AI, it automates the tedious extraction of data from vendor proposals, enables dynamic apple-to-apple comparisons, and provides data-driven insights to help procurement teams make the best decisions faster.
+Procurement teams are drowning in PDFs. **Smart RFP** parses them for you.
 
-Traditional procurement is slow and manual. Smart RFP makes it **instant**, **analytical**, and **visual**.
-
----
-
-## ✨ Key Features
-
-### 📄 AI Proposal Extraction
-Stop manually reading hundreds of pages. Drag and drop PDF proposals, and our AI engine instantly extracts:
--   **Vendor Details & Pricing**: Automatically captures total costs.
--   **Executive Summaries**: Generates concise summaries of lengthy documents.
--   **Credential Analysis**: Highlights relevant vendor experience.
-
-### 📊 Intelligent Comparison Engine
-Compare vendors side-by-side with precision.
--   **Dynamic Dimensions**: The system extracts requirements from *your* RFP (e.g., "24/7 Support", "ISO Compliance") and scores every vendor against them.
--   **Weighted Scoring**: Vendors are graded (0-100) on each dimension.
--   **Visual Reports**: Radar charts and bar graphs make decision-making obvious.
-
-### ⚡ Real-Time Dashboard
--   Track **Open RFPs**, **Active Proposals**, and **Drafts** in one view.
--   Monitor the status of every ongoing procurement project.
-
-### 🔐 Secure & Modern
--   Role-based workflows.
--   Secure document storage.
--   Clean, responsive UI built with React & TailwindCSS.
+*   🤖 **Zero Data Entry**: Drag, drop, and let AI extract costs, timelines, and credentials.
+*   ⚖️ **True Comparisons**: Don't just compare prices. Compare *value* against your unique requirements.
+*   📊 **Visual Insights**: See the winners clearly with radar charts and dynamic scoring tables.
 
 ---
 
-## 🛠 Tech Stack
+## 🎨 Key Features
 
-### Frontend
--   **React 19**: Modern UI library for a seamless user experience.
--   **Vite**: Blazing fast build tool.
--   **TailwindCSS**: Utility-first CSS for beautiful, custom designs.
--   **ApexCharts**: Interactive data visualization for comparison reports.
-
-### Backend
--   **Python 3.10+**: Core logic and AI orchestrator.
--   **FastAPI**: High-performance web framework for APIs.
--   **SQLite/PostgreSQL**: Robust data persistence.
--   **AI Services**: Integrated LLMs for document parsing and scoring.
+| Feature | Description |
+| :--- | :--- |
+| **📄 PDF Extraction** | Instantly parse messy vendor proposals into structured JSON. |
+| **🧠 Intelligent Scoring** | Vendors are graded (0-100) on custom dimensions like *Security* or *Sustainability*. |
+| **📈 Dynamic Reports** | Generate beautiful Radar & Bar charts to visualize the "Best Fit" vendor. |
+| **🚀 Real-Time Dashboard** | Track all your open RFPs, active bids, and draft projects in one place. |
+| **🔒 Role-Based Access** | Secure environment for sensitive procurement data. |
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ The Stack
 
-Follow these steps to set up the project locally. For a detailed walkthrough, see [WORKFLOW.md](WORKFLOW.md).
+Built with performance and scalability in mind.
 
-### Prerequisites
-*   Node.js (v18+)
-*   Python (v3.10+)
+### **Frontend**
+![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
+![ApexCharts](https://img.shields.io/badge/ApexCharts-FF4560?style=flat-square&logo=apexcharts&logoColor=white)
 
-### Installation
+### **Backend**
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![AI Models](https://img.shields.io/badge/AI_Models-FF6F00?style=flat-square&logo=openai&logoColor=white)
 
-#### 1. Backend Setup
+---
+
+## 🚀 Quick Start
+
+Get up and running in minutes. See [WORKFLOW.md](WORKFLOW.md) for the full tour.
+
+### 1. Backend (Python)
 ```bash
-# Clone the repo
-git clone https://github.com/saim-honey388/smart-rfp-system.git
-cd smart-rfp-system
-
-# Install Python dependencies
 pip install -r requirements.txt
-
-# Start the API server
 python -m apps.api.main
 ```
 
-#### 2. Client Setup
+### 2. Frontend (React)
 ```bash
-# Open a new terminal
 cd apps/client
-
-# Install Node dependencies
 npm install
-
-# Start the frontend
 npm run dev
 ```
 
-Visit `http://localhost:5173` to view the app!
+---
+
+## 📸 Gallery
+
+<div align="center">
+
+| | |
+|:-------------------------:|:-------------------------:|
+| <img width="1604" alt="Create RFP" src="docs/images/create-rfp.png"> <br /> **Smart RFP Creation** | <img width="1604" alt="Analysis" src="docs/images/proposal-analysis.png"> <br /> **AI Proposal Analysis** |
+| <img width="1604" alt="Comparison" src="docs/images/comparison.png"> <br /> **Side-by-Side Review** | <img width="1604" alt="Charts" src="docs/images/radar-chart.png"> <br /> **Decision Charts** |
+
+</div>
 
 ---
 
-## 📸 Snapshots
-
-| Create RFP | Proposal Analysis |
-|:---:|:---:|
-| <img src="docs/images/create-rfp.png" alt="Create RFP" width="400"/> | <img src="docs/images/proposal-analysis.png" alt="Proposal Analysis" width="400"/> |
-
-| Comparison Report | Radar Chart |
-|:---:|:---:|
-| <img src="docs/images/comparison.png" alt="Comparison" width="400"/> | <img src="docs/images/radar-chart.png" alt="Radar Chart" width="400"/> |
-
----
-
-## 🤝 Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
-
----
-
-## 📧 Contact
-
-**Saim Khalid** - saim.khalid983@gmail.com
-Project Link: [https://github.com/saim-honey388/smart-rfp-system](https://github.com/saim-honey388/smart-rfp-system)
+<div align="center">
+  <p>Made with ❤️ by <a href="https://github.com/saim-honey388">Saim Khalid</a></p>
+  <p>
+    <a href="mailto:saim.khalid983@gmail.com">
+      <img src="https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email" />
+    </a>
+  </p>
+</div>
