@@ -106,11 +106,10 @@ npm run dev
 
 ---
 
-<div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/saim-honey388">Saim Khalid</a></p>
-  <p>
-    <a href="mailto:saim.khalid983@gmail.com">
-      <img src="https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email" />
-    </a>
-  </p>
-</div>
+## 📞 Contact
+
+**Saim Khalid**
+*   Email: [saim.khalid983@gmail.com](mailto:saim.khalid983@gmail.com)
+*   GitHub: [saim-honey388](https://github.com/saim-honey388)
+
+---
