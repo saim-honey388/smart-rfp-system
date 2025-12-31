@@ -47,3 +47,19 @@ class ProposalModel(SQLModel, table=True):
 
     rfp: Optional[RfpModel] = Relationship(back_populates="proposals")
 
+
+class SavedComparisonModel(SQLModel, table=True):
+    __tablename__ = "saved_comparisons"
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    rfp_id: str = Field(foreign_key="rfps.id", index=True)
+    dimensions: List[str] = Field(
+        sa_column=Column(JSON), default_factory=list, description="List of dimension IDs"
+    )
+    proposal_ids: List[str] = Field(
+        sa_column=Column(JSON), default_factory=list, description="List of proposal IDs in snippet"
+    )
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+

@@ -2,12 +2,82 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, ArrowLeft, CheckCircle, Send, Sparkles, AlertCircle, ChevronRight, FileText } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRFP } from '../context/RFPContext';
+import { useToast } from '../components/Toast';
 
 export default function CreateRFP() {
     const navigate = useNavigate();
     const { id } = useParams(); // Edit mode if ID present
-    const { addRFP, getRFP, updateRFP, chatWithRFPConsultant } = useRFP();
+    const { addRFP, getRFP, updateRFP, chatWithRFPConsultant, uploadRFPFile } = useRFP();
+    const { addToast } = useToast();
     const [step, setStep] = useState('select'); // select, editor
+
+    // ... (rest of simple state)
+
+    // ... (rest of logic mostly unchanged until handleFinalize)
+
+    const handleFinalize = async () => {
+        const errors = [];
+
+        if (!rfpData.title?.trim()) errors.push("Title");
+        if (!rfpData.scope?.trim()) errors.push("Project Scope");
+        if (!rfpData.budget) errors.push("Budget");
+        if (!rfpData.timeline.end || rfpData.timeline.end === "TBD") errors.push("Due Date");
+
+        if (errors.length > 0) {
+            addToast(`Cannot publish - Missing: ${errors.join(', ')}`, 'error');
+            return;
+        }
+
+        const publishedRFP = {
+            ...rfpData,
+            status: 'open',
+            due: rfpData.timeline.end,
+            chatHistory: chatMessages,  // Save chat for history
+            conversationState: conversationState
+        };
+
+        if (id) {
+            // Update existing draft
+            await updateRFP(id, publishedRFP);
+        } else {
+            // Create new
+            await addRFP(publishedRFP);
+        }
+
+        addToast("RFP Published Successfully!", "success");
+        setTimeout(() => navigate('/open-rfps'), 500);
+    };
+
+    const handleSaveDraft = async () => {
+        if (!rfpData.title?.trim()) {
+            addToast("Please provide at least a Title before saving.", "error");
+            return;
+        }
+
+        const draftData = {
+            ...rfpData,
+            status: 'draft',
+            due: rfpData.timeline.end || "TBD",
+            chatHistory: chatMessages,  // ✅ Save chat history
+            conversationState: conversationState  // ✅ Save state
+        };
+
+        try {
+            if (id) {
+                // Update existing draft
+                await updateRFP(id, draftData);
+                addToast("Draft updated successfully!", "success");
+            } else {
+                // Create new draft
+                await addRFP(draftData);
+                addToast("Draft saved successfully!", "success");
+            }
+            // Small delay to let user see the toast before navigating
+            setTimeout(() => navigate('/open-rfps'), 1000);
+        } catch (error) {
+            addToast(`Failed to save draft: ${error.message}`, "error");
+        }
+    };
     const chatEndRef = useRef(null);
 
     // -------------------------------------------------------------------------
@@ -32,6 +102,8 @@ export default function CreateRFP() {
     // State Machine for Conversation: 'INIT', 'ASK_TITLE', 'ASK_SCOPE', 'ASK_BUDGET', 'ASK_REQUIREMENTS', 'OPEN_EDIT'
     const [conversationState, setConversationState] = useState('INIT');
 
+    const fileInputRef = useRef(null);
+
     const startConsultation = () => {
         setStep('editor');
         setConversationState('ASK_TITLE');
@@ -41,20 +113,54 @@ export default function CreateRFP() {
     };
 
     const uploadContract = () => {
-        // Mock Extraction
-        setStep('editor');
-        setConversationState('OPEN_EDIT');
-        setRfpData({
-            title: "Extracted: HVAC Maintenance",
-            scope: "Standard maintenance agreement extracted from PDF. Includes quarterly inspections, emergency repairs, and preventive maintenance.",
-            requirements: ["Annual Inspection", "Filter Replacement", "Emergency Response within 4 hours"],
-            budget: "$12,000",
-            timeline: { start: "2025-01-01", end: "2025-12-31" },
-            status: "draft"
-        });
-        setChatMessages([
-            { role: 'ai', text: "I've extracted the details from your PDF. Please review the draft on the right. You can ask me to change anything." }
-        ]);
+        // Trigger file input click
+        fileInputRef.current?.click();
+    };
+
+    const handleFileUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setStep('editor');
+            setConversationState('OPEN_EDIT');
+
+            // Initial loading state
+            setChatMessages([
+                { role: 'ai', text: "I'm analyzing your RFP document... identifying scope, requirements, and timeline." }
+            ]);
+
+            // Show loading toast? Or just rely on chat message.
+
+            // Call API
+
+            // Call API
+            const extracted = await uploadRFPFile(file);
+            console.log("Extracted RFP Data:", extracted);
+
+            // Populate Form
+            setRfpData({
+                title: extracted.title || "Untitled RFP",
+                scope: extracted.scope || "",
+                requirements: extracted.requirements || [],
+                budget: extracted.budget || "TBD",
+                timeline: {
+                    start: "TBD",
+                    end: extracted.timeline_end || "TBD"
+                },
+                status: "draft"
+            });
+
+            // Update Chat
+            setChatMessages([
+                { role: 'ai', text: "I've extracted the details from your PDF. Please review the draft on the right. You can ask me to change anything." }
+            ]);
+
+        } catch (error) {
+            console.error("Extraction failed:", error);
+            addToast(`Failed to process RFP: ${error.message}`, 'error');
+            setStep('select'); // Go back on error
+        }
     };
 
     // -------------------------------------------------------------------------
@@ -178,70 +284,12 @@ export default function CreateRFP() {
         return !!(
             rfpData.title?.trim() &&
             rfpData.scope?.trim() &&
-            rfpData.budget &&
+            rfpData.budget && rfpData.budget !== "TBD" &&
             rfpData.timeline.end && rfpData.timeline.end !== "TBD"
         );
     };
 
-    const handleFinalize = () => {
-        const errors = [];
 
-        if (!rfpData.title?.trim()) errors.push("Title");
-        if (!rfpData.scope?.trim()) errors.push("Project Scope");
-        if (!rfpData.budget) errors.push("Budget");
-        if (!rfpData.timeline.end || rfpData.timeline.end === "TBD") errors.push("Due Date");
-
-        if (errors.length > 0) {
-            alert(`❌ Cannot publish - Missing required fields:\n\n• ${errors.join('\n• ')}\n\nPlease complete these fields using the AI consultant or save as draft.`);
-            return;
-        }
-
-        const publishedRFP = {
-            ...rfpData,
-            status: 'open',
-            due: rfpData.timeline.end,
-            chatHistory: chatMessages,  // Save chat for history
-            conversationState: conversationState
-        };
-
-        if (id) {
-            // Update existing draft
-            updateRFP(id, publishedRFP);
-        } else {
-            // Create new
-            addRFP(publishedRFP);
-        }
-
-        alert("✅ RFP Published Successfully!");
-        navigate('/open-rfps');
-    };
-
-    const handleSaveDraft = () => {
-        if (!rfpData.title?.trim()) {
-            alert("Please provide at least a Title before saving.");
-            return;
-        }
-
-        const draftData = {
-            ...rfpData,
-            status: 'draft',
-            due: rfpData.timeline.end || "TBD",
-            chatHistory: chatMessages,  // ✅ Save chat history
-            conversationState: conversationState  // ✅ Save state
-        };
-
-        if (id) {
-            // Update existing draft
-            updateRFP(id, draftData);
-            alert("💾 Draft updated!");
-        } else {
-            // Create new draft
-            addRFP(draftData);
-            alert("💾 Draft saved!");
-        }
-
-        navigate('/open-rfps');
-    };
 
     // -------------------------------------------------------------------------
     // 4. Render Step 1: Selection
@@ -268,6 +316,15 @@ export default function CreateRFP() {
                         <h3 className="text-xl font-bold text-slate-900 mb-2">Consultant AI</h3>
                         <p className="text-slate-500">Step-by-step interview to define your project needs.</p>
                     </button>
+
+                    {/* Hidden File Input */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept=".pdf"
+                        className="hidden"
+                    />
                 </div>
             </div>
         );

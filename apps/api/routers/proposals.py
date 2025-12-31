@@ -167,7 +167,7 @@ def approve_proposal(proposal_id: str):
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
     rfp = rfp_service.get_rfp(proposal.rfp_id)
-    updated = proposal_service.set_status(proposal_id, "approved")
+    updated = proposal_service.set_status(proposal_id, "Accepted")
     if rfp and updated:
         notification_service.send_approval_email(
             rfp_title=rfp.title,
@@ -183,7 +183,7 @@ def reject_proposal(proposal_id: str):
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
     rfp = rfp_service.get_rfp(proposal.rfp_id)
-    updated = proposal_service.set_status(proposal_id, "rejected")
+    updated = proposal_service.set_status(proposal_id, "Rejected")
     if rfp and updated:
         # Use latest AI review to drive the explanation email.
         from apps.api.services import review_service

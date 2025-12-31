@@ -10,7 +10,7 @@ router = APIRouter(tags=["chat"])
 def chat_with_proposal(proposal_id: str, body: ChatRequest):
     if not proposal_service.get_proposal(proposal_id):
         raise HTTPException(status_code=404, detail="Proposal not found")
-    reply = chat_service.ask_about_proposal(proposal_id, body.message)
+    reply = chat_service.ask_about_proposal(proposal_id, body.message, body.conversation_history)
     return ChatResponse(reply=reply)
 
 

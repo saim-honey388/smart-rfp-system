@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     proposal_id: str
     message: str = Field(..., example="What are the payment terms?")
+    conversation_history: list[dict] = Field(default_factory=list)
 
 
 

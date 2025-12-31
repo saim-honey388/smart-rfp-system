@@ -52,7 +52,7 @@ export default function ProposalDetail() {
         }
     };
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
 
@@ -60,12 +60,39 @@ export default function ProposalDetail() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
 
-        setTimeout(() => {
+        try {
+            // Prepare history for context
+            const history = messages.map(m => ({
+                role: m.role,
+                content: m.text // Backend expects 'content', frontend uses 'text'
+            }));
+
+            const response = await fetch(`${API_BASE}/proposals/${id}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    proposal_id: id,
+                    message: userMsg.text,
+                    conversation_history: history
+                })
+            });
+
+            if (!response.ok) throw new Error('Chat request failed');
+
+            const data = await response.json();
+
             setMessages(prev => [...prev, {
                 role: 'ai',
-                text: `Based on the document, ${proposal?.vendor || 'the vendor'} proposes a total price of ${proposal?.price || 'TBD'}. (This is a simulated AI response).`
+                text: data.reply
             }]);
-        }, 1000);
+
+        } catch (err) {
+            console.error('Chat error:', err);
+            setMessages(prev => [...prev, {
+                role: 'ai',
+                text: "I'm having trouble connecting to the backend. Please ensure the server is running."
+            }]);
+        }
     };
 
     if (!proposal) {
@@ -82,7 +109,7 @@ export default function ProposalDetail() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6 shrink-0">
                 <div className="flex items-center gap-4">
-                    <Link to="/comparisons" className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
+                    <Link to={fullProposal?.rfpId ? `/rfp/${fullProposal.rfpId}?tab=proposals` : (proposal?.rfpId ? `/rfp/${proposal.rfpId}?tab=proposals` : "/comparisons")} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
@@ -99,15 +126,24 @@ export default function ProposalDetail() {
                     </div>
                 </div>
                 <div className="flex gap-3">
-                    <button className="btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm">
+                    <button
+                        onClick={() => fullProposal && window.open(`http://localhost:8000/storage/proposals/${fullProposal.rfpId}/${fullProposal.id}.pdf`, '_blank')}
+                        className="btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                    >
                         <FileText size={16} /> View PDF
                     </button>
-                    {proposal.status === 'Pending' && (
+                    {proposal.status !== 'Accepted' && proposal.status !== 'Rejected' && (
                         <>
-                            <button className="btn bg-red-50 text-red-600 border border-red-100 hover:bg-red-100">
+                            <button
+                                onClick={() => useRFP().updateProposalStatus(id, 'Rejected')}
+                                className="btn bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
+                            >
                                 <XCircle size={16} /> Reject
                             </button>
-                            <button className="btn bg-green-600 text-white hover:bg-green-700 shadow-md">
+                            <button
+                                onClick={() => useRFP().updateProposalStatus(id, 'Accepted')}
+                                className="btn bg-green-600 text-white hover:bg-green-700 shadow-md"
+                            >
                                 <CheckCircle size={16} /> Accept Proposal
                             </button>
                         </>

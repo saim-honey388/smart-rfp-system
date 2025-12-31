@@ -7,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 
 from apps.api.config.settings import settings
 from apps.api.models.db import init_db
-from apps.api.routers import analysis, chat, pages, proposals, reviews, rfps
+from apps.api.models.db import init_db
+from apps.api.routers import analysis, chat, pages, proposals, reviews, rfps, comparisons
 
 # ...
 
@@ -30,6 +31,7 @@ app.add_middleware(
 
 # Static assets (CSS/JS) for server-rendered templates.
 app.mount("/static", StaticFiles(directory="apps/web/static"), name="static")
+app.mount("/storage", StaticFiles(directory=settings.storage_path), name="storage")
 
 # HTML page routes (no /api prefix).
 # app.include_router(pages.router)
@@ -39,7 +41,9 @@ app.include_router(rfps.router, prefix="/api")
 app.include_router(proposals.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
+app.include_router(analysis.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(comparisons.router, prefix="/api")
 
 
 @app.get("/")

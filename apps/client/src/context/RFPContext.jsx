@@ -39,7 +39,8 @@ export function RFPProvider({ children }) {
                 status: rfp.status,
                 budget: rfp.budget ? `$${rfp.budget.toLocaleString()}` : 'N/A',
                 scope: rfp.description || '',
-                requirements: rfp.requirements || []
+                requirements: (rfp.requirements || []).map(r => typeof r === 'object' ? r.text : r),
+                created_at: rfp.created_at // Added for time filtering
             }));
 
             setRfps(transformedRFPs);
@@ -103,8 +104,15 @@ export function RFPProvider({ children }) {
             // Handle budget parsing with 'k' support (e.g., "20k" -> 20000)
             let rawBudget = newRfp.budget || '';
             const isK = rawBudget.toLowerCase().includes('k');
-            let dbBudget = parseInt(rawBudget.replace(/[^0-9]/g, '')) || 5000;
-            if (isK && dbBudget < 1000) dbBudget *= 1000;
+            let dbBudget = parseInt(rawBudget.replace(/[^0-9]/g, '')); // Removed || 5000
+            if (isNaN(dbBudget)) dbBudget = null; // Send null if optional/invalid
+            if (dbBudget !== null && isK && dbBudget < 1000) dbBudget *= 1000;
+
+            // Handle date parsing: 'TBD' or empty should be null
+            let deadline = newRfp.due;
+            if (!deadline || deadline === "TBD") {
+                deadline = null;
+            }
 
             const response = await fetch(`${API_BASE}/rfps`, {
                 method: 'POST',
@@ -119,17 +127,23 @@ export function RFPProvider({ children }) {
                     ),
                     budget: dbBudget,
                     currency: 'USD',
-                    deadline: newRfp.due || null
+                    deadline: deadline,
+                    status: newRfp.status || 'open'
                 })
             });
 
-            if (!response.ok) throw new Error('Failed to create RFP');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new Error(errorData.detail || 'Failed to create RFP');
+            }
 
             // Refresh RFP list from backend
             await fetchRFPs();
+            return true;
         } catch (err) {
             console.error('Error creating RFP:', err);
-            alert(`Failed to create RFP: ${err.message}`);
+            // Re-throw so the component knows it failed
+            throw err;
         }
     };
 
@@ -152,7 +166,7 @@ export function RFPProvider({ children }) {
             vendor: 'AI Extracting from PDF...',
             status: 'Processing',
             price: '...',
-            summary: 'Reading document with PyPDF2 + AI...'
+            summary: 'Reading document with AI...'
         }]);
 
         // 2. Increment count optimistically
@@ -236,6 +250,29 @@ export function RFPProvider({ children }) {
         }
     };
 
+    // ✅ NEW: Upload RFP PDF for Extraction
+    const uploadRFPFile = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE}/rfps/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+            }
+
+            return await response.json();
+        } catch (err) {
+            console.error('RFP Upload Error:', err);
+            throw err;
+        }
+    };
+
     const chatWithRFPConsultant = async (message, currentState, history) => {
         try {
             const response = await fetch(`${API_BASE}/chat/rfp`, {
@@ -274,7 +311,10 @@ export function RFPProvider({ children }) {
             getProposalsForRFP,
             fetchRFPs,
             fetchProposals,
-            chatWithRFPConsultant
+            fetchRFPs,
+            fetchProposals,
+            chatWithRFPConsultant,
+            uploadRFPFile
         }}>
             {children}
         </RFPContext.Provider>

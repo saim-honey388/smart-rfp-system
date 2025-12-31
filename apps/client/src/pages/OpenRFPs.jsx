@@ -1,11 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, Filter, X, Calendar } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useRFP } from '../context/RFPContext';
 
 export default function OpenRFPs() {
     const { rfps } = useRFP();
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Initialize filters from URL params or default to 'all'
+    const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
+    const [filterTime, setFilterTime] = useState(searchParams.get('time') || 'all');
     const [searchQuery, setSearchQuery] = useState('');
 
     // Robust Filter Logic
@@ -22,15 +26,48 @@ export default function OpenRFPs() {
         const rfpStatus = rfp.status?.toLowerCase() || 'open';
         const matchesStatus = filterStatus === 'all' || rfpStatus === filterStatus.toLowerCase();
 
-        return matchesSearch && matchesStatus;
+        // 3. Time Filter
+        let matchesTime = true;
+        if (filterTime !== 'all' && rfp.created_at) {
+            const created = new Date(rfp.created_at);
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            switch (filterTime) {
+                case 'today':
+                    matchesTime = created >= startOfDay;
+                    break;
+                case 'week': {
+                    const firstDayOfWeek = new Date(now.setDate(now.getDate() - now.getDay())); // Sunday
+                    firstDayOfWeek.setHours(0, 0, 0, 0);
+                    matchesTime = created >= firstDayOfWeek;
+                    break;
+                }
+                case 'month': {
+                    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    matchesTime = created >= firstDayOfMonth;
+                    break;
+                }
+                case 'year': {
+                    const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+                    matchesTime = created >= firstDayOfYear;
+                    break;
+                }
+                default:
+                    matchesTime = true;
+            }
+        }
+
+        return matchesSearch && matchesStatus && matchesTime;
     });
 
     const clearFilters = () => {
         setSearchQuery('');
         setFilterStatus('all');
+        setFilterTime('all');
     };
 
-    const hasFilters = searchQuery !== '' || filterStatus !== 'all';
+    const hasFilters = searchQuery !== '' || filterStatus !== 'all' || filterTime !== 'all';
 
     return (
         <div className="animate-fade-in pb-16">
@@ -48,7 +85,7 @@ export default function OpenRFPs() {
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-wrap gap-4 items-center">
 
                 {/* Search */}
-                <div className="flex-1 min-w-[300px] relative">
+                <div className="flex-1 min-w-[250px] relative">
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
@@ -84,6 +121,24 @@ export default function OpenRFPs() {
                         <option value="open">Open</option>
                         <option value="closed">Closed</option>
                         <option value="draft">Draft</option>
+                    </select>
+                </div>
+
+                {/* Time Filter */}
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-slate-600 flex items-center gap-2">
+                        <Calendar size={16} /> Time:
+                    </span>
+                    <select
+                        value={filterTime}
+                        onChange={(e) => setFilterTime(e.target.value)}
+                        className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 cursor-pointer"
+                    >
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
                     </select>
                 </div>
 

@@ -13,14 +13,15 @@ class RfpBase(BaseModel):
     title: str = Field(..., example="Office Renovation RFP")
     description: Optional[str] = Field(None, example="Full fit-out of level 4")
     requirements: List[Requirement] = Field(default_factory=list)
-    budget: int = Field(..., example=50000, description="Total budget, at least 500, in steps of 500.")
+    budget: Optional[int] = Field(None, example=50000, description="Total budget, at least 500, in steps of 500.")
     currency: str = Field(default="USD")
     deadline: Optional[date] = None
+    status: str = Field(default="open")
 
     @field_validator("budget")
     @classmethod
-    def validate_budget(cls, v: int) -> int:
-        if v < 500:
+    def validate_budget(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 500:
             raise ValueError("Budget must be at least 500.")
         return v
 

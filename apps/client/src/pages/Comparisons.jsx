@@ -6,17 +6,63 @@ import { X } from 'lucide-react';
 
 export default function Comparisons() {
     const { proposals, rfps } = useRFP();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams(); // Fixed: Destructuring setter
     const rfpId = searchParams.get('rfp');
 
     // UI State
     const [selectedDimensions, setSelectedDimensions] = useState([]);
+
     const [showReport, setShowReport] = useState(false);
     const [selectedProposal, setSelectedProposal] = useState(null);
 
     // Get the specific RFP and its proposals
     const activeRFP = rfps.find(r => String(r.id) === String(rfpId)) || rfps.find(r => (r.proposals || 0) > 0) || rfps[0];
     const activeProposals = proposals.filter(p => String(p.rfpId) === String(activeRFP?.id) && p.status === 'Accepted');
+
+    console.log('DEBUG: Comparisons render cycle', {
+        rfpId,
+        rfpsCount: rfps.length,
+        activeRFP: activeRFP?.id,
+        activeProposalsCount: activeProposals.length
+    });
+
+    // State for Saved Comparisons List
+    const [savedComparisons, setSavedComparisons] = useState([]);
+    const [loadingSaved, setLoadingSaved] = useState(true);
+
+    useEffect(() => {
+        if (!rfpId) {
+            setLoadingSaved(true);
+            fetch('http://localhost:8000/api/comparisons')
+                .then(res => res.json())
+                .then(data => setSavedComparisons(data))
+                .catch(err => console.error("Failed to fetch saved comparisons:", err))
+                .finally(() => setLoadingSaved(false));
+        }
+    }, [rfpId]);
+
+    // Load saved dimensions on mount - Moved to top level
+    useEffect(() => {
+        if (rfpId) {
+            // Check for saved comparison on backend
+            fetch(`http://localhost:8000/api/comparisons/${rfpId}`)
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error('No saved comparison');
+                })
+                .then(data => {
+                    console.log("Loaded saved comparison:", data);
+                    if (data.dimensions && data.dimensions.length > 0) {
+                        setSelectedDimensions(data.dimensions);
+                        setShowReport(true);
+                    }
+                })
+                .catch(() => {
+                    // Fallback to local storage if needed, or just nothing
+                    console.log("No saved comparison found for this RFP.");
+                });
+        }
+    }, [rfpId]);
 
     // =======================
     // EXTRACT DIMENSIONS
@@ -52,16 +98,21 @@ export default function Comparisons() {
     // CALCULATE SCORES
     // =======================
     const dimensionsData = useMemo(() => {
-        if (availableDimensions.length === 0) return [];
+        if (availableDimensions.length === 0 || activeProposals.length === 0) return [];
 
-        return activeProposals.map(p => {
+        // Pre-calculate max price safely
+        const prices = activeProposals.map(prop => {
+            const safePrice = String(prop.price || '0');
+            const raw = parseFloat(safePrice.replace(/[^0-9.]/g, '')) || 0;
+            return safePrice.toLowerCase().includes('k') ? raw * 1000 : raw;
+        });
+        const maxPrice = Math.max(0, ...prices) || 100; // Correct usage
+
+        const calculated = activeProposals.map(p => {
             // Price/Cost Logic
-            const priceRaw = parseFloat(p.price.replace(/[^0-9.]/g, '')) || 0;
-            const priceAmount = p.price.toLowerCase().includes('k') ? priceRaw * 1000 : priceRaw;
-            const maxPrice = Math.max(...activeProposals.map(prop => {
-                const raw = parseFloat(prop.price.replace(/[^0-9.]/g, '')) || 0;
-                return prop.price.toLowerCase().includes('k') ? raw * 1000 : raw;
-            }));
+            const safePrice = String(p.price || '0');
+            const priceRaw = parseFloat(safePrice.replace(/[^0-9.]/g, '')) || 0;
+            const priceAmount = safePrice.toLowerCase().includes('k') ? priceRaw * 1000 : priceRaw;
 
             // Text to analyze (prefer full extracted text, fall back to summary)
             const analysisText = ((p.extracted_text || "") + " " + (p.summary || "")).toLowerCase();
@@ -69,20 +120,27 @@ export default function Comparisons() {
             const scores = {};
 
             availableDimensions.forEach(dim => {
-                if (dim.id === 'cost') {
-                    scores[dim.id] = maxPrice > 0 ? Math.round(((maxPrice - priceAmount) / maxPrice) * 100) : 50;
-                } else if (dim.id === 'timeline') {
-                    // Check specific timeline keywords or use explicit start date
-                    const hasDate = p.start_date || analysisText.includes('start') || analysisText.includes('schedule');
-                    scores[dim.id] = hasDate ? 85 : 60;
-                } else {
-                    // Keyword matching for dynamic dimensions
-                    const keywords = dim.keywords || [dim.name.toLowerCase()];
-                    const matches = keywords.filter(kw => analysisText.includes(kw.toLowerCase()));
-                    // higher score for more matches, max 95, min 40
-                    const baseScore = 40;
-                    const matchBonus = (matches.length / Math.max(keywords.length, 1)) * 55;
-                    scores[dim.id] = Math.round(Math.min(baseScore + matchBonus, 95));
+                try {
+                    if (dim.id === 'cost') {
+                        scores[dim.id] = maxPrice > 0 ? Math.round(((maxPrice - priceAmount) / maxPrice) * 100) : 50;
+                        // Ensure score is within 0-100
+                        scores[dim.id] = Math.max(0, Math.min(100, scores[dim.id]));
+                    } else if (dim.id === 'timeline') {
+                        // Check specific timeline keywords or use explicit start date
+                        const hasDate = p.start_date || analysisText.includes('start') || analysisText.includes('schedule');
+                        scores[dim.id] = hasDate ? 85 : 60;
+                    } else {
+                        // Keyword matching for dynamic dimensions
+                        const keywords = dim.keywords || [dim.name.toLowerCase()];
+                        const matches = keywords.filter(kw => analysisText.includes(kw.toLowerCase()));
+                        // higher score for more matches, max 95, min 40
+                        const baseScore = 40;
+                        const matchBonus = (matches.length / Math.max(keywords.length, 1)) * 55;
+                        scores[dim.id] = Math.round(Math.min(baseScore + matchBonus, 95));
+                    }
+                } catch (err) {
+                    // Fallback
+                    scores[dim.id] = 50;
                 }
             });
 
@@ -90,7 +148,7 @@ export default function Comparisons() {
             const selectedScores = selectedDimensions.map(dimId => scores[dimId] || 50);
             const overallScore = selectedScores.length > 0
                 ? Math.round(selectedScores.reduce((a, b) => a + b, 0) / selectedScores.length)
-                : Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length);
+                : Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Math.max(Object.values(scores).length, 1)); // safe div
 
             return {
                 id: p.id,
@@ -101,6 +159,9 @@ export default function Comparisons() {
                 overallScore
             };
         });
+
+        console.log('DEBUG: Calculated Dimensions Data', calculated);
+        return calculated;
     }, [activeProposals, availableDimensions, selectedDimensions]);
 
     // =======================
@@ -154,13 +215,54 @@ export default function Comparisons() {
     };
 
     const barSeries = [
-        { name: 'Overall Score', data: dimensionsData.map(d => d.overallScore) },
-        { name: 'Price Score', data: dimensionsData.map(d => d.scores.cost) }
+        { name: 'Overall Score', data: dimensionsData.map(d => d.overallScore || 0) },
+        { name: 'Price Score', data: dimensionsData.map(d => (d.scores && d.scores.cost) || 0) }
     ];
 
     // =======================
     // RENDER: DIMENSION SELECTION
     // =======================
+    // =======================
+    // RENDER: LIST OF COMPARISONS (If no specific RFP selected)
+    // =======================
+    // =======================
+    // RENDER: LIST OF COMPARISONS (If no specific RFP selected)
+    // =======================
+    if (!rfpId) {
+        return (
+            <div className="animate-fade-in pb-12">
+                <h1 className="text-3xl font-bold text-slate-900 mb-6">Saved Comparisons</h1>
+                {loadingSaved ? (
+                    <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+                        <p className="text-slate-500">Loading saved comparisons...</p>
+                    </div>
+                ) : savedComparisons.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+                        <p className="text-slate-500 mb-4">No saved comparisons found.</p>
+                        <p className="text-sm text-slate-400">Navigate to an RFP, generate a report, and save it to see it here.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {savedComparisons.map(comp => (
+                            <button
+                                key={comp.id}
+                                onClick={() => setSearchParams({ rfp: comp.rfp_id })}
+                                className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all text-left"
+                            >
+                                <h3 className="font-bold text-lg text-slate-800 mb-2">{comp.rfp_title || 'Unknown RFP'}</h3>
+                                <p className="text-sm text-slate-500 mb-4 line-clamp-2">Comparison of proposals</p>
+                                <div className="flex justify-between items-center text-xs font-medium text-slate-400">
+                                    <span>{new Date().toLocaleDateString()}</span>
+                                    <span className="text-blue-600">View Report →</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     if (!showReport) {
         return (
             <div className="animate-fade-in pb-12">
@@ -250,6 +352,34 @@ export default function Comparisons() {
         );
     }
 
+
+
+    const saveComparison = async () => {
+        // Should really save current accepted proposals too
+        const proposalIds = activeProposals.map(p => p.id);
+
+        try {
+            const res = await fetch('http://localhost:8000/api/comparisons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rfp_id: rfpId,
+                    dimensions: selectedDimensions,
+                    proposal_ids: proposalIds
+                })
+            });
+
+            if (res.ok) {
+                alert("Comparison report saved successfully!");
+            } else {
+                alert("Failed to save comparison.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error saving comparison.");
+        }
+    };
+
     // =======================
     // RENDER: COMPARISON REPORT
     // =======================
@@ -260,25 +390,60 @@ export default function Comparisons() {
                     <h1 className="text-3xl font-bold text-slate-900 mb-2">Comparison Report</h1>
                     <p className="text-slate-500">Analysis for RFP: <span className="font-bold text-slate-800">{activeRFP?.title}</span></p>
                 </div>
-                <button
-                    onClick={() => setShowReport(false)}
-                    className="text-sm px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded font-medium"
-                >
-                    ← Change Dimensions
-                </button>
+                <div className="flex gap-3 print:hidden">
+                    <button
+                        onClick={() => window.print()}
+                        className="text-sm px-4 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded font-medium shadow-sm flex items-center gap-2"
+                    >
+                        <span>Download PDF</span>
+                    </button>
+                    <button
+                        onClick={saveComparison}
+                        className="text-sm px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-medium border border-blue-200"
+                    >
+                        Save Comparison
+                    </button>
+                    <button
+                        onClick={() => setShowReport(false)}
+                        className="text-sm px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded font-medium"
+                    >
+                        ← Change Dimensions
+                    </button>
+                </div>
             </div>
 
+            <style>
+                {`
+                @media print {
+                    .print\\:hidden { display: none !important; }
+                    body { background: white; }
+                    .sidebar, header, nav { display: none !important; } /* Try to hide layout elements if accessible via common classes, otherwise layout specific override needed */
+                    #root > div > div.flex > aside { display: none; } /* Specific Layout targeting */
+                    main { padding: 0; margin: 0; }
+                }
+                `}
+            </style>
+
             {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-4">Attribute Analysis</h3>
-                    <ReactApexChart options={radarOptions} series={radarSeries} type="radar" height={300} />
+            {dimensionsData.length > 0 ? (
+                <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-700 mb-4">Attribute Analysis</h3>
+                            <ReactApexChart options={radarOptions} series={radarSeries} type="radar" height={300} />
+                        </div>
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-700 mb-4">Score vs Price</h3>
+                            <ReactApexChart options={barOptions} series={barSeries} type="bar" height={300} />
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <div className="bg-amber-50 border border-amber-200 p-8 rounded-xl text-center mb-8">
+                    <p className="text-amber-800 font-semibold mb-2">No comparison data available.</p>
+                    <p className="text-amber-600 text-sm">Either no proposals are accepted or data is missing. Please accept proposals in the RFP first.</p>
                 </div>
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-4">Score vs Price</h3>
-                    <ReactApexChart options={barOptions} series={barSeries} type="bar" height={300} />
-                </div>
-            </div>
+            )}
 
             {/* Table */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

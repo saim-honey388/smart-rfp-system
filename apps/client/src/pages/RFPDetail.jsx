@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Download, XCircle, Upload, CheckCircle, X, MessageSquare, Briefcase, FileText } from 'lucide-react';
 import { useRFP } from '../context/RFPContext';
 
@@ -10,7 +10,9 @@ export default function RFPDetail() {
     const rfp = getRFP(id);
     const proposals = getProposalsForRFP(id);
 
-    const [activeTab, setActiveTab] = useState('overview');
+    const [searchParams] = useSearchParams();
+    const initialTab = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState(initialTab || 'overview');
 
     if (!rfp) {
         return <div className="p-8 text-center text-red-500 font-bold">RFP Not Found (ID: {id})</div>;

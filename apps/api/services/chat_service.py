@@ -12,7 +12,7 @@ def _load_chat_prompt() -> str:
     return "You are a helpful assistant analyzing RFP proposals. Provide clear, structured responses using markdown formatting."
 
 
-def ask_about_proposal(proposal_id: str, message: str) -> str:
+def ask_about_proposal(proposal_id: str, message: str, history: list[dict] = []) -> str:
     proposal = proposal_service.get_proposal(proposal_id)
     if not proposal:
         return "Proposal not found."
@@ -50,7 +50,10 @@ def ask_about_proposal(proposal_id: str, message: str) -> str:
     if rfp:
         context_parts.append(f"\n# RFP Information")
         context_parts.append(f"**Title**: {rfp.title}")
-        context_parts.append(f"**Budget**: {rfp.budget:,.0f} {rfp.currency}")
+        if rfp.budget is not None:
+             context_parts.append(f"**Budget**: {rfp.budget:,.0f} {rfp.currency}")
+        else:
+             context_parts.append(f"**Budget**: TBD")
         
         if rfp.requirements:
             context_parts.append("\n**Requirements**:")
