@@ -7,8 +7,10 @@ This is an OPTIONAL feature - AI asks user if they want a form generated.
 
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+
+# Use unified AI client with fallback support
+from backend.src.utils.ai_client import get_chat_llm
 
 from backend.src.agents.form_structure_analyzer import (
     ProposalFormStructure,
@@ -47,7 +49,8 @@ class AIFormGenerator:
     
     def __init__(self, model: str = "gpt-4o", temperature: float = 0.3):
         # Slightly higher temperature for creative generation
-        self.llm = ChatOpenAI(model=model, temperature=temperature)
+        # Use unified client with OpenAI-first, Groq fallback
+        self.llm = get_chat_llm(model=model, temperature=temperature)
     
     def generate_form(
         self,

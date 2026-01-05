@@ -7,8 +7,6 @@ Maps vendor data to the blank proposal form structure for comparison.
 
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from backend.src.agents.form_structure_analyzer import (
@@ -20,6 +18,10 @@ from backend.src.agents.form_structure_analyzer import (
 from backend.src.agents.ingestion import ingest_document
 import os
 import re
+
+# Use unified AI client with fallback support
+from backend.src.utils.ai_client import get_chat_llm
+from backend.src.utils.embeddings import get_embeddings
 
 
 # --- Vendor Extraction Models (DYNAMIC) ---
@@ -81,9 +83,11 @@ class VendorDataExtractor:
     """
     
     def __init__(self, model: str = "gpt-4o", temperature: float = 0):
-        self.llm = ChatOpenAI(model=model, temperature=temperature)
+        # Use unified client with OpenAI-first, Groq fallback
+        self.llm = get_chat_llm(model=model, temperature=temperature)
         self.chroma_path = os.path.abspath(os.path.join(os.getcwd(), "data/chromadb"))
-        self.embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+        # Use unified embeddings with OpenAI-first, HuggingFace fallback
+        self.embedding = get_embeddings()
     
     def _get_collection_name(self, vendor_name: str) -> str:
         """Generate a safe collection name for the vendor."""

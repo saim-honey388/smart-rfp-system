@@ -11,11 +11,15 @@ langchain>=1.2.0
 langchain-core>=1.2.1
 langchain-openai>=1.1.0
 langchain-community>=0.3.0
+langchain-groq>=0.1.0
+langchain-huggingface>=0.0.3
 langgraph>=1.0.0
 openpyxl==3.1.2
 pdfplumber==0.11.0
 chromadb>=0.4.24
 tiktoken>=0.6.0
+groq>=0.4.0
+sentence-transformers>=2.2.0
 
 pypdf>=4.0.0
 reportlab>=4.0.0

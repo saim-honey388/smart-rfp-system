@@ -13,11 +13,13 @@ Uses LangChain's with_structured_output() for reliable schema extraction.
 
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, create_model
-from langchain_openai import ChatOpenAI
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 import os
+
+# Use unified AI client with fallback support
+from backend.src.utils.ai_client import get_chat_llm
+from backend.src.utils.embeddings import get_embeddings
 
 
 # --- Discovery Models ---
@@ -80,9 +82,11 @@ class FormStructureAnalyzer:
     """
     
     def __init__(self, model: str = "gpt-4o", temperature: float = 0):
-        self.llm = ChatOpenAI(model=model, temperature=temperature)
+        # Use unified client with OpenAI-first, Groq fallback
+        self.llm = get_chat_llm(model=model, temperature=temperature)
         self.chroma_path = os.path.abspath(os.path.join(os.getcwd(), "data/chromadb"))
-        self.embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+        # Use unified embeddings with OpenAI-first, HuggingFace fallback
+        self.embedding = get_embeddings()
     
     def get_proposal_form_context(self, collection_name: str = "RFP_Context", k: int = 15) -> str:
         """
@@ -227,7 +231,7 @@ Analyze this RFP and extract the complete proposal form structure.""")
         
         # DEBUG: Print a sample of the context to see what the AI is receiving
         print(f"  DEBUG: Context length = {len(rfp_context)} chars")
-        print(f"  DEBUG: Context sample (first 500 chars):\n{rfp_context[:500]}...")
+        print(f"  DEBUG: Context sample (first 1000 chars):\n{rfp_context[:1000]}...")
         
         # Create structured LLM for row extraction using wrapper model
         structured_llm = self.llm.with_structured_output(ExtractedRows)

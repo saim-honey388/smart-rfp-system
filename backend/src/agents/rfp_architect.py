@@ -1,11 +1,13 @@
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 import os
+
+# Use unified AI client with fallback support
+from backend.src.utils.ai_client import get_chat_llm
+from backend.src.utils.embeddings import get_embeddings
 
 # --- Domain Models ---
 class LineItem(BaseModel):
@@ -32,11 +34,13 @@ class DiscoveredSections(BaseModel):
 # --- Agent Class ---
 class RFPArchitect:
     def __init__(self):
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        # Use unified client with OpenAI-first, Groq fallback
+        self.llm = get_chat_llm(model="gpt-4o", temperature=0)
         self.parser = JsonOutputParser(pydantic_object=ProposalSchema)
         self.discovery_parser = JsonOutputParser(pydantic_object=DiscoveredSections)
         self.chroma_path = os.path.abspath(os.path.join(os.getcwd(), "data/chromadb"))
-        self.embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+        # Use unified embeddings with OpenAI-first, HuggingFace fallback
+        self.embedding = get_embeddings()
         
     def get_rfp_context(self, query="Proposal Submission Form Bid Sheet Price Table General Conditions Structural Balcony Restoration Painting Stucco Column/Posts Chase Exterior Façade Additions"):
         """Retrieves relevant chunks from ChromaDB for the schema."""

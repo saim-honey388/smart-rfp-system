@@ -3,8 +3,10 @@ import shutil
 from typing import List
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+
+# Use unified embeddings with fallback support
+from backend.src.utils.embeddings import get_embeddings
 
 # Paths
 DATA_DIR = os.path.join(os.getcwd(), "data")
@@ -35,7 +37,8 @@ def ingest_document(file_path: str, collection_name: str, chunk_size=1000, chunk
     print(f"Split into {len(chunks)} chunks.")
 
     # 3. Embed & Link to Chroma
-    embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+    # Use unified embeddings with OpenAI-first, HuggingFace fallback
+    embedding_function = get_embeddings()
     
     db = Chroma(
         persist_directory=CHROMA_PATH,

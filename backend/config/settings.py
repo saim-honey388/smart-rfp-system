@@ -13,6 +13,10 @@ class Settings:
         self.storage_path = os.getenv("STORAGE_PATH", "storage")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        # Groq fallback configuration
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.use_fallback_provider = os.getenv("USE_FALLBACK_PROVIDER", "false").lower() == "true"
         # SMTP / email settings
         self.smtp_host = os.getenv("SMTP_HOST", "")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))

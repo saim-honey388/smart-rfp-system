@@ -1,33 +1,19 @@
-"""AI client using OpenAI API (configurable)."""
+"""AI client with OpenAI-first, Groq fallback support."""
 
 import json
 from typing import Any, Dict
 
-import httpx
-from openai import OpenAI
-
-from apps.api.config.settings import settings
-
-
-def _client() -> OpenAI:
-    if not settings.openai_api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set.")
-    # Create httpx client explicitly to avoid proxies parameter issues
-    http_client = httpx.Client(timeout=60.0)
-    return OpenAI(api_key=settings.openai_api_key, http_client=http_client)
+# Use the unified AI client with automatic fallback
+from backend.src.utils.ai_client import complete_with_fallback
 
 
 def complete(system: str, prompt: str, temperature: float = 0.2) -> str:
-    client = _client()
-    resp = client.chat.completions.create(
-        model=settings.openai_model,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=temperature,
-    )
-    return resp.choices[0].message.content.strip()
+    """
+    Complete a chat request with automatic fallback.
+    
+    Uses OpenAI as primary provider, falls back to Groq on rate limit.
+    """
+    return complete_with_fallback(system, prompt, temperature)
 
 
 def complete_json(system: str, prompt: str, temperature: float = 0.2) -> Dict[str, Any]:
