@@ -30,11 +30,11 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
     const downloadCSV = () => {
         if (!data) return;
 
-        // Dynamic columns from API
-        const vendorColumns = data.vendor_columns || ['Unit Cost', 'Total'];
+        const fixedColumns = data.fixed_columns || [];
+        const vendorColumns = data.vendor_columns || [];
 
-        // Headers
-        const headers = ["Item ID", "Section", "Description", "RFP Qty", "RFP Unit"];
+        // Headers: Fixed columns + Vendor columns per proposal
+        const headers = [...fixedColumns];
         data.proposals.forEach(p => {
             vendorColumns.forEach(col => {
                 headers.push(`${p.vendor} ${col}`);
@@ -43,23 +43,24 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
 
         const rows = [headers];
 
-        data.rows.forEach(r => {
-            const row = [
-                `"${r.item_id}"`,
-                `"${r.section || ''}"`,
-                `"${r.description.replace(/"/g, '""')}"`,
-                r.quantity,
-                r.unit
-            ];
+        data.rows.forEach(row => {
+            const csvRow = [];
 
+            // Fixed column values
+            fixedColumns.forEach(col => {
+                const val = row.fixed_values?.[col] || '';
+                csvRow.push(`"${String(val).replace(/"/g, '""')}"`);
+            });
+
+            // Vendor column values
             data.proposals.forEach(p => {
-                const val = r.vendor_values[p.id] || {};
+                const vendorVals = row.vendor_values?.[p.id] || {};
                 vendorColumns.forEach(col => {
-                    row.push(val[col] || '');
+                    csvRow.push(vendorVals[col] || '');
                 });
             });
 
-            rows.push(row);
+            rows.push(csvRow);
         });
 
         const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
@@ -72,11 +73,15 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
         document.body.removeChild(link);
     };
 
+    // Helper to format column name for display
+    const formatColumnName = (col) => {
+        return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    };
+
     if (!isOpen) return null;
 
-    // Dynamic columns from API response
-    const vendorColumns = data?.vendor_columns || ['Unit Cost', 'Total'];
-    const fixedColumns = data?.fixed_columns || ['Item', 'Description'];
+    const fixedColumns = data?.fixed_columns || [];
+    const vendorColumns = data?.vendor_columns || [];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-8 animate-fade-in">
@@ -117,10 +122,10 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
                             <table className="w-full text-sm text-left border-collapse">
                                 <thead className="bg-slate-800 text-slate-200 sticky top-0 z-10 shadow-md">
                                     <tr>
-                                        {/* Dynamic fixed columns from RFP schema */}
+                                        {/* Fixed columns header */}
                                         {fixedColumns.map((col, idx) => (
-                                            <th key={`fixed-${idx}`} className={`px-4 py-3 border-r border-slate-600 ${idx === 0 ? 'w-20' : 'w-64'}`}>
-                                                {col}
+                                            <th key={`fixed-${idx}`} className={`px-4 py-3 border-r border-slate-600 ${idx === 0 ? 'w-20' : ''}`}>
+                                                {formatColumnName(col)}
                                             </th>
                                         ))}
                                         {/* Vendor headers */}
@@ -135,48 +140,45 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
                                             </th>
                                         ))}
                                     </tr>
-                                    {/* Dynamic vendor column sub-headers */}
-                                    <tr className="bg-slate-700 text-xs uppercase text-slate-300">
-                                        <th className="px-4 py-1 border-r border-slate-600" colSpan={fixedColumns.length}></th>
-                                        {data.proposals.map(p => (
-                                            <React.Fragment key={p.id}>
-                                                {vendorColumns.map((col, colIdx) => (
-                                                    <th key={`${p.id}-${colIdx}`} className="px-2 py-1 border-r border-slate-600 text-right w-24">
-                                                        {col}
-                                                    </th>
-                                                ))}
-                                            </React.Fragment>
-                                        ))}
-                                    </tr>
+                                    {/* Vendor column sub-headers */}
+                                    {vendorColumns.length > 0 && (
+                                        <tr className="bg-slate-700 text-xs uppercase text-slate-300">
+                                            <th className="px-4 py-1 border-r border-slate-600" colSpan={fixedColumns.length}></th>
+                                            {data.proposals.map(p => (
+                                                <React.Fragment key={p.id}>
+                                                    {vendorColumns.map((col, colIdx) => (
+                                                        <th key={`${p.id}-${colIdx}`} className="px-2 py-1 border-r border-slate-600 text-right w-24">
+                                                            {formatColumnName(col)}
+                                                        </th>
+                                                    ))}
+                                                </React.Fragment>
+                                            ))}
+                                        </tr>
+                                    )}
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 bg-white">
                                     {data.rows.map((row, idx) => {
-                                        // Section Header Logic
-                                        const prevSection = idx > 0 ? data.rows[idx - 1].section : null;
-                                        const showSection = row.section && row.section !== prevSection;
-                                        const isGrandTotal = row.item_id === 'GRAND_TOTAL';
+                                        // Get section from fixed_values
+                                        const section = row.fixed_values?.section;
+                                        const prevSection = idx > 0 ? data.rows[idx - 1].fixed_values?.section : null;
+                                        const showSection = section && section !== prevSection;
+                                        const isGrandTotal = row.is_grand_total;
 
                                         return (
                                             <React.Fragment key={idx}>
                                                 {showSection && (
                                                     <tr className="bg-slate-100 border-b border-slate-300">
                                                         <td colSpan={100} className="px-4 py-2 font-bold text-slate-800 text-xs uppercase tracking-wider sticky left-0">
-                                                            {row.section}
+                                                            {section}
                                                         </td>
                                                     </tr>
                                                 )}
                                                 <tr className={`transition-colors group ${isGrandTotal ? 'bg-slate-800 text-white font-bold sticky bottom-0' : 'hover:bg-blue-50'}`}>
-                                                    {/* Dynamic fixed column cells */}
+                                                    {/* Fixed column cells */}
                                                     {fixedColumns.map((col, colIdx) => {
-                                                        // Map column name to row field
-                                                        const fieldKey = col.toLowerCase().replace(/\s+/g, '_').replace('#', 'num');
-                                                        const isItemCol = colIdx === 0 || col.toLowerCase().includes('item');
+                                                        const value = row.fixed_values?.[col] || '';
                                                         const isDescCol = col.toLowerCase().includes('desc');
-
-                                                        // Get value: try exact match, then common field names
-                                                        let value = row[fieldKey] || row[col.toLowerCase()];
-                                                        if (!value && isItemCol) value = row.item_id;
-                                                        if (!value && isDescCol) value = row.description;
+                                                        const isItemCol = col.toLowerCase().includes('item');
 
                                                         return (
                                                             <td
@@ -193,23 +195,27 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
                                                         );
                                                     })}
 
-                                                    {/* Dynamic vendor columns */}
+                                                    {/* Vendor columns */}
                                                     {data.proposals.map(p => {
-                                                        const val = row.vendor_values[p.id] || {};
+                                                        const vendorVals = row.vendor_values?.[p.id] || {};
                                                         return (
                                                             <React.Fragment key={p.id}>
                                                                 {vendorColumns.map((col, colIdx) => {
-                                                                    const isLastCol = colIdx === vendorColumns.length - 1;
                                                                     const isTotalCol = col.toLowerCase().includes('total');
+                                                                    const cellValue = vendorVals[col] || '-';
+                                                                    const isNotQuoted = cellValue === 'Not Quoted';
+
                                                                     return (
                                                                         <td
                                                                             key={`${p.id}-${colIdx}`}
                                                                             className={`px-2 py-2 border-r text-right ${isGrandTotal
                                                                                 ? `border-slate-600 ${isTotalCol ? 'text-green-400 text-lg' : ''}`
-                                                                                : `border-slate-200 ${isTotalCol ? 'font-medium text-slate-900 bg-slate-50/30' : 'text-slate-600 text-sm'}`
+                                                                                : isNotQuoted
+                                                                                    ? 'border-slate-200 text-red-400 italic text-xs'
+                                                                                    : `border-slate-200 ${isTotalCol ? 'font-medium text-slate-900 bg-slate-50/30' : 'text-slate-600 text-sm'}`
                                                                                 }`}
                                                                         >
-                                                                            {val[col] || '-'}
+                                                                            {cellValue}
                                                                         </td>
                                                                     );
                                                                 })}
@@ -227,6 +233,7 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
                             <FileText size={48} className="mb-4 text-slate-300" />
                             <p>No compatible comparison data available.</p>
+                            {data?.message && <p className="text-sm mt-2">{data.message}</p>}
                         </div>
                     )}
                 </div>
@@ -234,3 +241,4 @@ export default function ComparisonMatrixModal({ rfpId, isOpen, onClose }) {
         </div>
     );
 }
+

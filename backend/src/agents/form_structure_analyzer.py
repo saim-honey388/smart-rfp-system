@@ -90,7 +90,7 @@ class FormStructureAnalyzer:
         # Use unified embeddings with OpenAI-first, HuggingFace fallback
         self.embedding = get_embeddings()
     
-    def get_proposal_form_context(self, collection_name: str = "RFP_Context", k: int = 15) -> str:
+    def get_proposal_form_context(self, collection_name: str = "RFP_Context", k: int = 15, custom_query: str = None) -> str:
         """
         Retrieves proposal form pages from ChromaDB.
         
@@ -99,6 +99,11 @@ class FormStructureAnalyzer:
         2. Identify the likely start of the proposal form.
         3. Retrieve a generous window of CONTIGUOUS pages (e.g., start_page to start_page + 10)
            to ensure we capture multi-page tables without gaps.
+           
+        Args:
+            collection_name: ChromaDB collection to search
+            k: Number of results to retrieve
+            custom_query: Optional custom search query (e.g., RFP's section names for vendor proposals)
         """
         db = Chroma(
             persist_directory=self.chroma_path, 
@@ -106,15 +111,30 @@ class FormStructureAnalyzer:
             collection_name=collection_name
         )
         
-        # 1. Find Anchor Pages - query for BOTH form structure AND pricing data
-        query = "Proposal Submission Form Bid Sheet Schedule of Values Unit Price Total Cost Extended Amount Pricing Table"
+        # 1. Find Anchor Pages - use custom query if provided (e.g., RFP sections for vendors)
+        if custom_query:
+            query = custom_query
+            print(f"DEBUG: Using custom query: {query[:100]}...")
+        else:
+            query = "Proposal Submission Form Bid Sheet Schedule of Values Unit Price Total Cost Extended Amount Pricing Table"
         results = db.similarity_search(query, k=k)
         
         if not results:
             return ""
 
-        # 2. Identify Page Range
-        # Extract page numbers from metadata
+        # CRITICAL: For vendor extraction (custom_query = RFP sections), 
+        # use search results DIRECTLY - these match the RFP sections
+        if custom_query:
+            print("DEBUG: Using semantic search results directly for vendor extraction")
+            print(f"DEBUG: Found {len(results)} matching chunks")
+            for doc in results[:5]:
+                p = doc.metadata.get('page')
+                print(f" - Page {p}: {doc.page_content[:60]}...")
+            
+            # Return the chunks that match the RFP section query
+            return "\n\n".join([doc.page_content for doc in results])
+
+        # 2. For RFP extraction (no custom_query), identify page range
         pages = []
         print("DEBUG: Search Results Candidates:")
         for doc in results:
@@ -124,12 +144,10 @@ class FormStructureAnalyzer:
                 print(f" - Page {p}: {doc.page_content[:50]}...")
         
         if not pages:
-            # Fallback if no page metadata
             return "\n\n".join([doc.page_content for doc in results])
             
-        # Find the most likely start page (min page from top matches)
         start_page = min(pages)
-        end_page = start_page + 12 # Fetch 12 pages to cover long forms
+        end_page = start_page + 12
         
         print(f"DEBUG: Form Anchor found at Page {start_page}. Fetching range {start_page}-{end_page}...")
 
@@ -161,13 +179,28 @@ class FormStructureAnalyzer:
         
         # PRIORITIZE chunks with dollar amounts (actual prices) over chunks without
         # This ensures filled pricing tables come before blank templates
-        full_context_docs = docs_with_prices + docs_without_prices
+        # LIMIT chunks without prices to prevent drowning out real data
+        MAX_BLANK_CHUNKS = 5  # Only include a few blank chunks for context
+        
+        full_context_docs = docs_with_prices  # Price chunks come FIRST
+        
+        # Only add a few blank chunks for context, not all of them
+        if len(docs_without_prices) > MAX_BLANK_CHUNKS:
+            docs_without_prices = docs_without_prices[:MAX_BLANK_CHUNKS]
+        
+        full_context_docs.extend(docs_without_prices)
         
         print(f"DEBUG: Form Context: Retained {len(full_context_docs)} chunks from pages {start_page}-{end_page}")
         print(f"  - Chunks with prices ($): {len(docs_with_prices)}")
-        print(f"  - Chunks without prices: {len(docs_without_prices)}")
+        print(f"  - Chunks without prices (limited): {len(docs_without_prices)}")
         
-        return "\n\n".join(full_context_docs)
+        # Add a CLEAR SEPARATOR so AI knows which is the real data
+        if docs_with_prices:
+            price_section = "\\n\\n=== FILLED DATA WITH ACTUAL PRICES (EXTRACT FROM THIS) ===\\n\\n" + "\\n\\n".join(docs_with_prices)
+            blank_section = "\\n\\n=== TEMPLATE CONTEXT (FOR REFERENCE ONLY) ===\\n\\n" + "\\n\\n".join(docs_without_prices) if docs_without_prices else ""
+            return price_section + blank_section
+        else:
+            return "\\n\\n".join(full_context_docs)
     
     def discover_form_structure(self, rfp_context: str) -> ProposalFormStructure:
         """
@@ -239,42 +272,45 @@ Analyze this RFP and extract the complete proposal form structure.""")
         structured_llm = self.llm.with_structured_output(ExtractedRows)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are extracting line items from a proposal form or bid form document.
+            ("system", """You are extracting line items from a vendor's filled proposal or bid form.
 
-Extract EVERY line item from the document. For EACH item, extract:
-1. section - which section it belongs to (e.g., "I Structural", "General Conditions")
-2. item_id - the item number or name (1, 2, 3, "Repair Specifications", etc.)
-3. description - the full description of work
-4. quantity - the quantity value if available
-5. unit - the unit of measure if available (SF, LF, LS, EA, etc.)
-6. unit_cost - the unit cost/price per unit if available
-7. total - the total amount for this line item
+CRITICAL: Extract line items that belong ONLY to the following sections:
+{target_sections}
 
-EXTRACTING PRICES - CRITICAL:
-- Look for ANY dollar amounts ($) in the document - these are prices!
-- Dollar amounts look like: $4.10, $50,000.00, $1,122,772.91
-- If the table has a "Price" column, put that value in "total"
-- If the table has separate "Unit Cost" and "Total" columns, use both
-- If there's only one price per row, put it in "total"
-- NEVER leave unit_cost or total as null if there is a $ amount for that row
+You must IGNORE any summary tables or general cost overviews that do not belong to these specific sections.
 
-IMPORTANT:
-- Extract values from whatever table format is in the document
-- Do NOT skip any line items - extract ALL of them
-- Look at the ACTUAL content, not at TBD placeholders
-- Prioritize rows that have dollar amounts over rows with TBD"""),
+For EACH line item in these sections, extract:
+1. section - which of the target sections it belongs to
+2. item_id - the item number or name (1, 2, 3...)
+3. description - the description of work
+4. quantity - quantity (extract TBD if that's what is written, or value if available)
+5. unit - unit (SF, LF, LS etc)
+6. unit_cost - unit cost (extract raw numbers or cid codes if garbled, or null)
+7. total - total price (extract raw numbers or cid codes if garbled, or null)
+
+DATA EXTRACTION RULES:
+- Focus ONLY on the rows under the target sections.
+- **PRICE EXTRACTION (Strict Literal Mode):**
+  - If the value is a number (e.g., "4.10", "$150.00"), extract the NUMERIC value.
+  - If the value explicitly says "TBD", extract "TBD".
+  - If the cell is empty or has unreadable encoding (garbage), extract null.
+  - DO NOT GUESS. Extract exactly what is visible in the column.
+- Use the discovered structure as that discovered from the RFP.
+- DO NOT SKIP ROWS just because prices are null/TBD. We need the full item list.
+"""),
             ("user", """Document Content:
 
 {rfp_content}
 
-Extract all line items with their prices (look for $ amounts).""")
+Extract all line items for the sections: {target_sections}""")
         ])
         
         chain = prompt | structured_llm
         
         try:
             result = chain.invoke({
-                "rfp_content": rfp_context
+                "rfp_content": rfp_context,
+                "target_sections": ", ".join(structure.sections) if structure.sections else "All sections found in the document"
             })
             print(f"  ✓ Extracted {len(result.rows)} line items")
             return result.rows

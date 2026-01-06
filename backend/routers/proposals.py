@@ -103,46 +103,88 @@ async def upload_proposal(
     except Exception as e:
         print(f"Agent Extraction Failed: {e}")
     
-    # --- NEW: Extract Vendor's Filled Proposal Form using SAME FormStructureAnalyzer ---
-    # Treat the vendor proposal just like an RFP - use the same architect to extract form data
+    # --- Extract Vendor's Filled Proposal Form using RFP's SCHEMA ---
+    # The vendor uses the EXACT SAME form as the RFP - just with their values filled in
+    # So we use the RFP's schema (already extracted) to extract vendor values
     vendor_form_data = []
     vendor_form_schema = None
     try:
-        from backend.src.agents.form_structure_analyzer import FormStructureAnalyzer
+        from backend.src.agents.form_structure_analyzer import FormStructureAnalyzer, ProposalFormStructure
         from backend.src.agents.ingestion import ingest_document
         
-        print(f"--- Extracting vendor form data using FormStructureAnalyzer (same as RFP) ---")
+        # Get the RFP's form schema (already extracted when RFP was uploaded)
+        rfp = rfp_service.get_rfp(rfp_id)
+        rfp_schema = rfp.proposal_form_schema if rfp else None
         
-        # Ingest vendor proposal PDF into a unique collection
-        vendor_collection = f"Vendor_Proposal_{proposal.id}"
-        ingest_document(str(pdf_path), collection_name=vendor_collection, reset=True)
-        
-        # Use the SAME FormStructureAnalyzer that we use for RFPs
-        analyzer = FormStructureAnalyzer()
-        
-        # Get context from vendor proposal (same method as RFP)
-        proposal_context = analyzer.get_proposal_form_context(collection_name=vendor_collection, k=20)
-        
-        if proposal_context:
-            # Discover structure (same as RFP)
-            structure = analyzer.discover_form_structure(proposal_context)
+        if rfp_schema and rfp_schema.get('fixed_columns'):
+            print(f"--- Extracting vendor form using RFP's SCHEMA (not re-discovering) ---")
+            print(f"  RFP Schema: fixed={rfp_schema.get('fixed_columns')}, vendor={rfp_schema.get('vendor_columns')}")
             
-            # Extract rows (same as RFP)
-            rows = analyzer.extract_form_rows(proposal_context, structure)
+            # Ingest vendor proposal PDF into a unique collection
+            vendor_collection = f"Vendor_Proposal_{proposal.id}"
+            ingest_document(str(pdf_path), collection_name=vendor_collection, reset=True)
             
-            # Convert to dict format for storage
-            vendor_form_data = [row.model_dump() for row in rows]
-            vendor_form_schema = structure.model_dump()
+            # Use FormStructureAnalyzer but with RFP's schema
+            analyzer = FormStructureAnalyzer()
             
-            print(f"✓ Extracted {len(vendor_form_data)} vendor form rows using FormStructureAnalyzer")
-            print(f"  Vendor columns: {structure.vendor_columns}")
+            # Build a DYNAMIC query from the RFP's sections and columns
+            # This ensures we find the correct table that matches the RFP structure
+            rfp_sections = rfp_schema.get('sections', [])
+            rfp_columns = rfp_schema.get('fixed_columns', []) + rfp_schema.get('vendor_columns', [])
+            custom_query = " ".join(rfp_sections[:5]) + " " + " ".join(rfp_columns) + " Item Description Unit Cost Total"
+            print(f"  Using custom query from RFP: {custom_query[:80]}...")
             
-            # DEBUG: Print first 3 rows to see what was extracted
-            print(f"  DEBUG - First 3 extracted rows:")
-            for i, row in enumerate(vendor_form_data[:3]):
-                print(f"    Row {i+1}: item_id={row.get('item_id')}, qty={row.get('quantity')}, unit={row.get('unit')}, unit_cost={row.get('unit_cost')}, total={row.get('total')}")
+            # Get context from vendor proposal using RFP's sections as query
+            proposal_context = analyzer.get_proposal_form_context(
+                collection_name=vendor_collection, 
+                k=20,
+                custom_query=custom_query
+            )
+            
+            if proposal_context:
+                # Create structure from RFP's schema (NOT re-discovering)
+                structure = ProposalFormStructure(
+                    form_title=rfp_schema.get('form_title', 'Proposal Form'),
+                    tables=rfp_schema.get('tables', []),
+                    fixed_columns=rfp_schema.get('fixed_columns', []),
+                    vendor_columns=rfp_schema.get('vendor_columns', []),
+                    sections=rfp_schema.get('sections', [])
+                )
+                
+                # Extract rows using RFP's structure
+                rows = analyzer.extract_form_rows(proposal_context, structure)
+                
+                # Convert to dict format for storage
+                vendor_form_data = [row.model_dump() for row in rows]
+                vendor_form_schema = rfp_schema  # Use RFP's schema
+                
+                print(f"✓ Extracted {len(vendor_form_data)} vendor form rows using RFP's schema")
+                print(f"  Columns used: {structure.vendor_columns}")
+                
+                # DEBUG: Print first 3 rows
+                print(f"  DEBUG - First 3 extracted rows:")
+                for i, row in enumerate(vendor_form_data[:3]):
+                    print(f"    Row {i+1}: item_id={row.get('item_id')}, qty={row.get('quantity')}, unit={row.get('unit')}, unit_cost={row.get('unit_cost')}, total={row.get('total')}")
+            else:
+                print("⚠ No proposal form context found in vendor PDF")
         else:
-            print("⚠ No proposal form context found in vendor PDF")
+            print("⚠ RFP has no form schema - falling back to auto-discovery")
+            # Fallback to original behavior if RFP has no schema
+            from backend.src.agents.form_structure_analyzer import FormStructureAnalyzer
+            from backend.src.agents.ingestion import ingest_document
+            
+            vendor_collection = f"Vendor_Proposal_{proposal.id}"
+            ingest_document(str(pdf_path), collection_name=vendor_collection, reset=True)
+            
+            analyzer = FormStructureAnalyzer()
+            proposal_context = analyzer.get_proposal_form_context(collection_name=vendor_collection, k=20)
+            
+            if proposal_context:
+                structure = analyzer.discover_form_structure(proposal_context)
+                rows = analyzer.extract_form_rows(proposal_context, structure)
+                vendor_form_data = [row.model_dump() for row in rows]
+                vendor_form_schema = structure.model_dump()
+                print(f"✓ Extracted {len(vendor_form_data)} vendor form rows (auto-discovered)")
             
     except Exception as form_err:
         print(f"⚠ Vendor form extraction failed (non-fatal): {form_err}")
@@ -292,11 +334,10 @@ def approve_proposal(proposal_id: str):
     rfp = rfp_service.get_rfp(proposal.rfp_id)
     updated = proposal_service.set_status(proposal_id, "Accepted")
     if rfp and updated:
-        notification_service.send_approval_email(
-            rfp_title=rfp.title,
-            contractor_email=updated.contractor_email or "",
-            contractor_name=updated.contractor,
-        )
+        # User requested to disable email sending
+        # background_tasks.add_task(_send_approval_email_task, rfp, updated)
+        pass
+        
     return updated
 
 
@@ -324,152 +365,161 @@ def reject_proposal(proposal_id: str):
 
 
 @router.get("/proposals/{rfp_id}/matrix")
-def get_proposal_matrix(rfp_id: str):
+async def get_proposal_matrix(rfp_id: str):
     """
     Returns a unified comparison matrix of the RFP line items 
     vs the filled values from each vendor proposal.
     
-    DYNAMIC: Columns are determined by rfp.proposal_form_schema.vendor_columns
+    COLUMN CLASSIFICATION:
+    - Majority voting: >50% match with RFP → Fixed column
+    - AI semantic check: For ambiguous columns
+    - Cached per RFP + proposal set
     """
+    from backend.services.column_classifier import (
+        classify_columns_majority_voting,
+        classify_with_ai_fallback,
+        get_cached_classification,
+        build_cache
+    )
+    from apps.api.models.db import get_session
+    from apps.api.models.entities import RfpModel
 
     rfp = rfp_service.get_rfp(rfp_id)
     if not rfp:
         raise HTTPException(status_code=404, detail="RFP not found")
         
     proposals = proposal_service.list_proposals(rfp_id=rfp_id)
+    rfp_rows = rfp.proposal_form_rows or []
     
-    # Get dynamic columns from RFP schema
-    rfp_schema = rfp.proposal_form_schema or {}
-    vendor_columns = rfp_schema.get('vendor_columns', ['Unit Cost', 'Total'])  # Fallback
-    fixed_columns = rfp_schema.get('fixed_columns', ['Item', 'Description'])
+    if not rfp_rows:
+        return {
+            "rfp_title": rfp.title,
+            "fixed_columns": [],
+            "vendor_columns": [],
+            "proposals": [{"id": p.id, "vendor": p.contractor, "status": p.status} for p in proposals],
+            "rows": [],
+            "message": "No RFP proposal form rows found"
+        }
     
-    # Helper function to parse numeric values
+    # Get proposal IDs with form data
+    proposals_with_data = [p for p in proposals if p.proposal_form_data]
+    proposal_ids_with_data = [p.id for p in proposals_with_data]
+    
+    # --- Check cache ---
+    cached = get_cached_classification(rfp.comparison_matrix_cache or {}, proposal_ids_with_data)
+    
+    if cached:
+        fixed_columns, vendor_columns = cached
+        print(f"✓ Using cached classification: fixed={fixed_columns}, vendor={vendor_columns}")
+    else:
+        # --- Run classification ---
+        print("→ Running column classification...")
+        
+        # Prepare vendor data for classifier
+        vendor_data = [
+            {"id": p.id, "proposal_form_data": p.proposal_form_data}
+            for p in proposals
+        ]
+        
+        # First try majority voting only (faster)
+        fixed_columns, vendor_columns, ambiguous = classify_columns_majority_voting(
+            rfp_rows, vendor_data, threshold=0.5
+        )
+        
+        # If we have ambiguous columns, use AI fallback
+        if ambiguous:
+            print(f"  → Ambiguous columns detected: {ambiguous}, running AI check...")
+            fixed_columns, vendor_columns = await classify_with_ai_fallback(
+                rfp_rows, vendor_data, threshold=0.5
+            )
+        
+        print(f"  ✓ Classification: fixed={fixed_columns}, vendor={vendor_columns}")
+        
+        # --- Save cache ---
+        new_cache = build_cache(fixed_columns, vendor_columns, proposal_ids_with_data)
+        with get_session() as session:
+            db_rfp = session.get(RfpModel, rfp_id)
+            if db_rfp:
+                db_rfp.comparison_matrix_cache = new_cache
+                session.add(db_rfp)
+                session.commit()
+                print(f"  ✓ Saved classification cache for RFP {rfp_id[:8]}")
+    
+    # --- Helper functions ---
+    def get_vendor_row(proposal, item_id):
+        """Find vendor row matching RFP item_id."""
+        for row in (proposal.proposal_form_data or []):
+            if str(row.get('item_id', '')).strip() == str(item_id).strip():
+                return row
+        return None
+    
     def parse_number(value):
-        if not value or str(value).upper() in ('TBD', 'N/A', '-', ''):
+        if not value or str(value).upper() in ('TBD', 'N/A', '-', '$-', ''):
             return None
         try:
-            # Remove $, commas, and whitespace
             cleaned = str(value).replace('$', '').replace(',', '').strip()
             return float(cleaned)
         except (ValueError, TypeError):
             return None
     
-    # Find the "Total" column for grand total calculation
+    # Find Total column for grand total
     total_column = next((c for c in vendor_columns if 'total' in c.lower()), None)
-    
-    # Track grand totals per proposal
     vendor_grand_totals = {p.id: 0.0 for p in proposals}
     
-    rfp_rows = rfp.proposal_form_rows or []
+    # --- Build matrix rows ---
     matrix_rows = []
     
-    for r_row in rfp_rows:
-        item_id = r_row.get('item_id')
+    for rfp_row in rfp_rows:
+        item_id = rfp_row.get('item_id')
         
-        row_data = {
-            "section": r_row.get('section'),
-            "item_id": item_id,
-            "description": r_row.get('description'),
-            "quantity": r_row.get('quantity'),
-            "unit": r_row.get('unit'),
-            "vendor_values": {}
-        }
+        # Fixed values from RFP
+        fixed_values = {col: rfp_row.get(col) for col in fixed_columns}
         
+        # Vendor-specific values
+        vendor_values = {}
         for p in proposals:
-            # Find matching row in p.proposal_form_data
-            p_data = p.proposal_form_data or []
+            vendor_row = get_vendor_row(p, item_id)
+            values = {}
             
-            # Match by item_id - normalize both to string and strip
-            match = next((x for x in p_data if str(x.get('item_id', '')).strip() == str(item_id).strip()), None)
+            for col in vendor_columns:
+                if vendor_row:
+                    values[col] = vendor_row.get(col) or "-"
+                else:
+                    values[col] = "Not Quoted"
             
-            # Build values dict dynamically
-            if match:
-                values = match.get('values') or {}
-                
-                # If values dict is empty, build from flat fields in the match
-                if not values:
-                    values = {}
-                    
-                    # Word synonyms for dynamic matching (price~cost, qty~quantity)
-                    synonyms = {
-                        'price': {'cost', 'rate'},
-                        'cost': {'price', 'rate'},
-                        'qty': {'quantity'},
-                        'quantity': {'qty'},
-                    }
-                    
-                    def expand_words(words):
-                        """Expand word set with synonyms."""
-                        expanded = set(words)
-                        for w in words:
-                            if w in synonyms:
-                                expanded.update(synonyms[w])
-                        return expanded
-                    
-                    # For each vendor column from RFP schema, find matching key in vendor data
-                    for col in vendor_columns:
-                        col_words = set(col.lower().replace('_', ' ').replace('-', ' ').split())
-                        col_words_expanded = expand_words(col_words)
-                        col_key = col.lower().replace(' ', '_')
-                        
-                        for key, val in match.items():
-                            if key in ('item_id', 'description', 'section', 'values'):
-                                continue
-                            
-                            key_words = set(key.lower().replace('_', ' ').replace('-', ' ').split())
-                            key_words_expanded = expand_words(key_words)
-                            key_norm = key.lower().replace(' ', '_')
-                            
-                            # Match if:
-                            # 1. Exact normalized key match
-                            # 2. OR expanded word sets overlap significantly
-                            common_words = col_words_expanded & key_words_expanded
-                            
-                            if key_norm == col_key:
-                                # Exact match
-                                if val is not None:
-                                    values[col] = val
-                                    break
-                            elif len(common_words) >= 2 or (len(col_words) == 1 and len(key_words) == 1 and common_words):
-                                # Strong word overlap (2+ words match) or single-word exact match
-                                if val is not None:
-                                    values[col] = val
-                                    break
-            else:
-                values = {}
-            
-            # Add to grand total if we have a Total column
-            if total_column and total_column in values:
-                total_num = parse_number(values.get(total_column))
+            # Add to grand total
+            if total_column and vendor_row:
+                total_num = parse_number(vendor_row.get(total_column) or vendor_row.get('total'))
                 if total_num is not None:
                     vendor_grand_totals[p.id] += total_num
             
-            row_data["vendor_values"][p.id] = values
+            vendor_values[p.id] = values
         
-        matrix_rows.append(row_data)
+        matrix_rows.append({
+            "fixed_values": fixed_values,
+            "vendor_values": vendor_values
+        })
     
-    # Add Grand Total row
-    grand_total_row = {
-        "section": None,
-        "item_id": "GRAND_TOTAL",
-        "description": "GRAND TOTAL",
-        "quantity": "",
-        "unit": "",
-        "vendor_values": {}
-    }
+    # --- Grand Total row ---
+    grand_total_fixed = {col: ("GRAND TOTAL" if col in ('description', 'item_id') else "") for col in fixed_columns}
+    grand_total_vendor = {}
     
     for p in proposals:
-        grand_total_values = {}
+        values = {}
         if total_column:
-            grand_total_values[total_column] = f"${vendor_grand_totals[p.id]:,.2f}"
-        grand_total_row["vendor_values"][p.id] = grand_total_values
+            values[total_column] = f"${vendor_grand_totals[p.id]:,.2f}"
+        grand_total_vendor[p.id] = values
     
-    matrix_rows.append(grand_total_row)
+    matrix_rows.append({
+        "is_grand_total": True,
+        "fixed_values": grand_total_fixed,
+        "vendor_values": grand_total_vendor
+    })
         
     return {
         "rfp_title": rfp.title,
-        "vendor_columns": vendor_columns,  # Dynamic columns for frontend
         "fixed_columns": fixed_columns,
+        "vendor_columns": vendor_columns,
         "proposals": [{"id": p.id, "vendor": p.contractor, "status": p.status} for p in proposals],
         "rows": matrix_rows
     }

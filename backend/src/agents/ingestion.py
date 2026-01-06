@@ -23,7 +23,14 @@ def ingest_document(file_path: str, collection_name: str, chunk_size=1000, chunk
     # ... (PDF Loading logic) ...
 
     # 1. Load PDF
-    loader = PyPDFLoader(file_path)
+    # Use PDFPlumber for better table text extraction
+    try:
+        from langchain_community.document_loaders import PDFPlumberLoader
+        loader = PDFPlumberLoader(file_path)
+    except ImportError:
+        print("PDFPlumberLoader not found, falling back to PyPDFLoader")
+        loader = PyPDFLoader(file_path)
+        
     pages = loader.load()
     print(f"Loaded {len(pages)} pages.")
 

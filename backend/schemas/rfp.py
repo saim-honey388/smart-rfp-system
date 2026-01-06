@@ -19,6 +19,7 @@ class RfpBase(BaseModel):
     status: str = Field(default="open")
     proposal_form_schema: dict = Field(default_factory=dict)
     proposal_form_rows: List[dict] = Field(default_factory=list)
+    comparison_matrix_cache: dict = Field(default_factory=dict)
 
     @field_validator("budget")
     @classmethod

@@ -29,6 +29,10 @@ class RfpModel(SQLModel, table=True):
         sa_column=Column(JSON), default_factory=list,
         description="Line items from the proposal form (item_id, description, quantity, unit, etc.)"
     )
+    comparison_matrix_cache: dict = Field(
+        sa_column=Column(JSON), default_factory=dict,
+        description="Cached column classification: {proposal_ids, fixed_columns, vendor_columns}"
+    )
 
     proposals: List["ProposalModel"] = Relationship(back_populates="rfp")
 

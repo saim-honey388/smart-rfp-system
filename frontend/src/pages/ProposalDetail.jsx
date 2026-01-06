@@ -7,7 +7,7 @@ const API_BASE = 'http://localhost:8000/api';
 
 export default function ProposalDetail() {
     const { id } = useParams();
-    const { proposals } = useRFP();
+    const { proposals, updateProposalStatus } = useRFP();
     const [proposal, setProposal] = useState(null);
     const [fullProposal, setFullProposal] = useState(null);
     const [rfpData, setRfpData] = useState(null);  // RFP form structure
@@ -147,13 +147,13 @@ export default function ProposalDetail() {
                     {proposal.status !== 'Accepted' && proposal.status !== 'Rejected' && (
                         <>
                             <button
-                                onClick={() => useRFP().updateProposalStatus(id, 'Rejected')}
+                                onClick={() => updateProposalStatus(id, 'Rejected')}
                                 className="btn bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
                             >
                                 <XCircle size={16} /> Reject
                             </button>
                             <button
-                                onClick={() => useRFP().updateProposalStatus(id, 'Accepted')}
+                                onClick={() => updateProposalStatus(id, 'Accepted')}
                                 className="btn bg-green-600 text-white hover:bg-green-700 shadow-md"
                             >
                                 <CheckCircle size={16} /> Accept Proposal

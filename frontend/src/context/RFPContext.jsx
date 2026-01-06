@@ -319,8 +319,6 @@ export function RFPProvider({ children }) {
             getProposalsForRFP,
             fetchRFPs,
             fetchProposals,
-            fetchRFPs,
-            fetchProposals,
             chatWithRFPConsultant,
             uploadRFPFile
         }}>
