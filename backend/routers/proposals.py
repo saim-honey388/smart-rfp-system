@@ -392,14 +392,31 @@ async def get_proposal_matrix(rfp_id: str):
     rfp_rows = rfp.proposal_form_rows or []
     
     if not rfp_rows:
-        return {
-            "rfp_title": rfp.title,
-            "fixed_columns": [],
-            "vendor_columns": [],
-            "proposals": [{"id": p.id, "vendor": p.contractor, "status": p.status} for p in proposals],
-            "rows": [],
-            "message": "No RFP proposal form rows found"
-        }
+        # Fallback: Try to use the most complete vendor proposal as the "Master" structure
+        print("ℹ RFP has no proposal form rows. Attempting to use vendor proposals as master template...")
+        
+        proposals_with_data = [p for p in proposals if p.proposal_form_data]
+        if not proposals_with_data:
+            return {
+                "rfp_title": rfp.title,
+                "fixed_columns": [],
+                "vendor_columns": [],
+                "proposals": [{"id": p.id, "vendor": p.contractor, "status": p.status} for p in proposals],
+                "rows": [],
+                "message": "No RFP proposal form rows found and no vendor data available to infer structure."
+            }
+
+        # Find the "widest" proposal (most rows) to serve as master
+        # We also prefer proposals that have 'item_id' filled out
+        best_proposal = max(proposals_with_data, key=lambda p: len(p.proposal_form_data or []))
+        print(f"✓ Selected vendor '{best_proposal.contractor}' as surrogate master template ({len(best_proposal.proposal_form_data)} rows)")
+        
+        # Use this proposal's rows as the "RFP" rows
+        # We need to ensure we treat its values as the "Reference" for alignment
+        rfp_rows = best_proposal.proposal_form_data
+        
+        # We also need to infer the schema (columns) from this proposal if available
+        # The column classifier below will handle the column detection based on this new usage
     
     # Get proposal IDs with form data
     proposals_with_data = [p for p in proposals if p.proposal_form_data]
