@@ -118,6 +118,11 @@ class SavedComparisonModel(SQLModel, table=True):
     proposal_ids: List[str] = Field(
         sa_column=Column(JSON), default_factory=list, description="List of proposal IDs in snippet"
     )
+    # NEW: Cache AI comparison scores to avoid re-running AI on reload
+    scores_cache: dict = Field(
+        sa_column=Column(JSON), default_factory=dict,
+        description="Cached AI comparison scores: {proposals: [{id, vendor, scores, overall_score}]}"
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

@@ -58,9 +58,17 @@ export default function Comparisons() {
         }
     }, [rfpId]);
 
-    // Load saved dimensions on mount - Moved to top level
+    // State to track if cache is stale
+    const [cacheStale, setCacheStale] = useState(false);
+
+    // Ref to prevent loading saved comparison multiple times
+    const hasLoadedSavedComparison = React.useRef(false);
+
+    // Load saved dimensions AND cached scores on mount (once only)
     useEffect(() => {
-        if (rfpId) {
+        if (rfpId && activeProposals.length > 0 && !hasLoadedSavedComparison.current) {
+            hasLoadedSavedComparison.current = true; // Prevent future runs
+
             // Check for saved comparison on backend
             fetch(`http://localhost:8000/api/comparisons/${rfpId}`)
                 .then(res => {
@@ -70,16 +78,37 @@ export default function Comparisons() {
                 .then(data => {
                     console.log("Loaded saved comparison:", data);
                     if (data.dimensions && data.dimensions.length > 0) {
-                        setSelectedDimensions(data.dimensions);
-                        setShowReport(true);
+                        // Deduplicate and limit to max 5
+                        const uniqueDimensions = [...new Set(data.dimensions)].slice(0, 5);
+                        console.log("Setting dimensions (deduplicated):", uniqueDimensions);
+                        setSelectedDimensions(uniqueDimensions);
+
+                        // Check if proposals have changed
+                        const currentProposalIds = activeProposals.map(p => p.id).sort();
+                        const cachedProposalIds = (data.proposal_ids || []).sort();
+                        const proposalsChanged = JSON.stringify(currentProposalIds) !== JSON.stringify(cachedProposalIds);
+
+                        if (proposalsChanged) {
+                            console.log("⚠️ Proposals changed! Cache is stale, will re-run AI.");
+                            setCacheStale(true);
+                            setShowReport(false); // Don't show stale report
+                        } else if (data.scores_cache && data.scores_cache.proposals) {
+                            // Proposals match - use cached scores
+                            console.log("✓ Using cached AI scores (proposals unchanged)");
+                            setAiScores(data.scores_cache);
+                            setCacheStale(false);
+                            setShowReport(true);
+                        } else {
+                            // No cached scores available
+                            setCacheStale(true);
+                        }
                     }
                 })
                 .catch(() => {
-                    // Fallback to local storage if needed, or just nothing
                     console.log("No saved comparison found for this RFP.");
                 });
         }
-    }, [rfpId]);
+    }, [rfpId, activeProposals]);
 
     // =======================
     // EXTRACT DIMENSIONS
@@ -104,68 +133,68 @@ export default function Comparisons() {
 
     const availableDimensions = useMemo(() => {
         return aiDimensions.length > 0 ? aiDimensions : [
+            { id: 'experience', name: 'Experience', type: 'general', keywords: ['experience', 'years', 'projects', 'portfolio', 'completed', 'similar'] },
             { id: 'cost', name: 'Cost', type: 'general' },
-            { id: 'timeline', name: 'Timeline', type: 'general' },
-            { id: 'experience', name: 'Experience', type: 'general' }
+            { id: 'materials_warranty', name: 'Materials/Warranty', type: 'general', keywords: ['materials', 'warranty', 'guarantee', 'quality', 'grade', 'specification'] },
+            { id: 'schedule', name: 'Schedule', type: 'general', keywords: ['schedule', 'timeline', 'start', 'completion', 'days', 'weeks', 'months'] },
+            { id: 'safety', name: 'Safety', type: 'general', keywords: ['safety', 'osha', 'compliance', 'training', 'incident', 'protection'] },
+            { id: 'responsiveness', name: 'Responsiveness', type: 'general', keywords: ['responsive', 'communication', 'availability', 'support', 'contact', 'response'] }
         ];
     }, [aiDimensions]);
 
 
     // =======================
-    // CALCULATE SCORES
+    // AI-POWERED SCORES (from backend)
     // =======================
+    const [aiScores, setAiScores] = useState(null);
+    const [loadingScores, setLoadingScores] = useState(false);
+
+    // Fallback: Simple frontend scores when AI not available
     const dimensionsData = useMemo(() => {
+        // If we have AI scores, use them
+        if (aiScores?.proposals) {
+            return aiScores.proposals.map(p => ({
+                id: p.id,
+                vendor: p.vendor,
+                price: activeProposals.find(ap => ap.id === p.id)?.price || 'N/A',
+                summary: activeProposals.find(ap => ap.id === p.id)?.summary || 'No summary',
+                scores: Object.fromEntries(
+                    Object.entries(p.scores).map(([dimId, scoreData]) => [dimId, scoreData.score])
+                ),
+                scoreDetails: p.scores, // Keep full details with labels and reasoning
+                overallScore: p.overall_score
+            }));
+        }
+
+        // Fallback: Local calculation if AI not available
         if (availableDimensions.length === 0 || activeProposals.length === 0) return [];
 
-        // Pre-calculate max price safely
         const prices = activeProposals.map(prop => {
             const safePrice = String(prop.price || '0');
             const raw = parseFloat(safePrice.replace(/[^0-9.]/g, '')) || 0;
             return safePrice.toLowerCase().includes('k') ? raw * 1000 : raw;
         });
-        const maxPrice = Math.max(0, ...prices) || 100; // Correct usage
+        const maxPrice = Math.max(0, ...prices) || 100;
 
-        const calculated = activeProposals.map(p => {
-            // Price/Cost Logic
+        return activeProposals.map(p => {
             const safePrice = String(p.price || '0');
             const priceRaw = parseFloat(safePrice.replace(/[^0-9.]/g, '')) || 0;
             const priceAmount = safePrice.toLowerCase().includes('k') ? priceRaw * 1000 : priceRaw;
 
-            // Text to analyze (prefer full extracted text, fall back to summary)
-            const analysisText = ((p.extracted_text || "") + " " + (p.summary || "")).toLowerCase();
-
             const scores = {};
-
             availableDimensions.forEach(dim => {
-                try {
-                    if (dim.id === 'cost') {
-                        scores[dim.id] = maxPrice > 0 ? Math.round(((maxPrice - priceAmount) / maxPrice) * 100) : 50;
-                        // Ensure score is within 0-100
-                        scores[dim.id] = Math.max(0, Math.min(100, scores[dim.id]));
-                    } else if (dim.id === 'timeline') {
-                        // Check specific timeline keywords or use explicit start date
-                        const hasDate = p.start_date || analysisText.includes('start') || analysisText.includes('schedule');
-                        scores[dim.id] = hasDate ? 85 : 60;
-                    } else {
-                        // Keyword matching for dynamic dimensions
-                        const keywords = dim.keywords || [dim.name.toLowerCase()];
-                        const matches = keywords.filter(kw => analysisText.includes(kw.toLowerCase()));
-                        // higher score for more matches, max 95, min 40
-                        const baseScore = 40;
-                        const matchBonus = (matches.length / Math.max(keywords.length, 1)) * 55;
-                        scores[dim.id] = Math.round(Math.min(baseScore + matchBonus, 95));
-                    }
-                } catch (err) {
-                    // Fallback
-                    scores[dim.id] = 50;
+                if (dim.id === 'cost') {
+                    scores[dim.id] = maxPrice > 0 ? Math.round(((maxPrice - priceAmount) / maxPrice) * 100) : 50;
+                    scores[dim.id] = Math.max(0, Math.min(100, scores[dim.id]));
+                } else {
+                    scores[dim.id] = 50; // Default when AI not available
                 }
             });
 
-            // Overall score
             const selectedScores = selectedDimensions.map(dimId => scores[dimId] || 50);
             const overallScore = selectedScores.length > 0
                 ? Math.round(selectedScores.reduce((a, b) => a + b, 0) / selectedScores.length)
-                : Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Math.max(Object.values(scores).length, 1)); // safe div
+                : 50;
 
             return {
                 id: p.id,
@@ -176,10 +205,7 @@ export default function Comparisons() {
                 overallScore
             };
         });
-
-        console.log('DEBUG: Calculated Dimensions Data', calculated);
-        return calculated;
-    }, [activeProposals, availableDimensions, selectedDimensions]);
+    }, [activeProposals, availableDimensions, selectedDimensions, aiScores]);
 
     // =======================
     // DIMENSION SELECTION HANDLERS
@@ -192,9 +218,55 @@ export default function Comparisons() {
         }
     };
 
-    const generateReport = () => {
+    const generateReport = async () => {
         if (selectedDimensions.length > 0) {
+            const proposalIds = activeProposals.map(p => p.id);
+            let fetchedAiData = null;
+
+            // Fetch AI-powered comparison scores
+            setLoadingScores(true);
+            try {
+                const aiRes = await fetch(`http://localhost:8000/api/analysis/rfp/${rfpId}/compare`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        proposal_ids: proposalIds,
+                        dimensions: selectedDimensions
+                    })
+                });
+
+                if (aiRes.ok) {
+                    fetchedAiData = await aiRes.json();
+                    setAiScores(fetchedAiData);
+                    console.log("AI Comparison Scores:", fetchedAiData);
+                } else {
+                    console.error("AI comparison failed, using fallback scores");
+                }
+            } catch (e) {
+                console.error("Failed to fetch AI scores:", e);
+            } finally {
+                setLoadingScores(false);
+            }
+
             setShowReport(true);
+            setCacheStale(false); // Cache is now fresh
+
+            // Auto-save comparison WITH cached AI scores
+            try {
+                await fetch('http://localhost:8000/api/comparisons', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rfp_id: rfpId,
+                        dimensions: selectedDimensions,
+                        proposal_ids: proposalIds,
+                        scores_cache: fetchedAiData  // Save AI scores for instant reload
+                    })
+                });
+                console.log("Comparison with AI scores saved successfully");
+            } catch (e) {
+                console.error("Failed to auto-save comparison:", e);
+            }
         }
     };
 
@@ -361,19 +433,29 @@ export default function Comparisons() {
                         )}
                     </div>
 
+                    {/* Stale Cache Warning */}
+                    {cacheStale && (
+                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                            <span className="text-amber-600">⚠️</span>
+                            <span className="text-sm text-amber-800">
+                                Proposals have changed since last comparison. Click "Update Report" to refresh AI analysis.
+                            </span>
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between pt-6 border-t border-slate-200">
                         <div className="text-sm text-slate-600">
                             Selected: <span className="font-bold text-slate-900">{selectedDimensions.length}</span> / 5
                         </div>
                         <button
                             onClick={generateReport}
-                            disabled={selectedDimensions.length === 0}
-                            className={`px-6 py-3 rounded-lg font-semibold ${selectedDimensions.length > 0
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            disabled={selectedDimensions.length === 0 || loadingScores}
+                            className={`px-6 py-3 rounded-lg font-semibold ${selectedDimensions.length > 0 && !loadingScores
+                                ? cacheStale ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-blue-600 text-white hover:bg-blue-700'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
-                            Generate Report
+                            {loadingScores ? 'Analyzing...' : cacheStale ? 'Update Report' : 'Generate Report'}
                         </button>
                     </div>
                 </div>
@@ -493,19 +575,19 @@ export default function Comparisons() {
                                     <td className="p-4 font-semibold text-slate-800">{d.vendor}</td>
                                     {selectedDimensions.map(dimId => (
                                         <td key={dimId} className="p-4">
-                                            <span className={`px-2 py-1 rounded text-sm font-medium ${d.scores[dimId] >= 80 ? 'bg-green-100 text-green-700' :
-                                                d.scores[dimId] >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>
-                                                {dimId === 'cost' && d.scores[dimId] >= 80 ? 'Top Tier' :
-                                                    dimId === 'cost' && d.scores[dimId] >= 60 ? 'Standard' :
-                                                        dimId === 'cost' ? 'High Cost' :
-                                                            dimId === 'timeline' && d.scores[dimId] >= 80 ? 'Top Tier' :
-                                                                dimId === 'timeline' && d.scores[dimId] >= 60 ? 'Standard' :
-                                                                    dimId === 'timeline' ? 'Slow' :
-                                                                        dimId === 'experience' && d.scores[dimId] >= 80 ? 'Top Tier' :
-                                                                            dimId === 'experience' && d.scores[dimId] >= 60 ? 'Standard' : 'Low Experience'}
-                                            </span>
+                                            <div className="flex flex-col items-start gap-1">
+                                                <span className={`px-2 py-1 rounded text-sm font-medium ${d.scores[dimId] >= 80 ? 'bg-green-100 text-green-700' :
+                                                    d.scores[dimId] >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    {d.scores[dimId]}%
+                                                </span>
+                                                <span className="text-xs text-slate-500">
+                                                    {d.scoreDetails?.[dimId]?.label ||
+                                                        (d.scores[dimId] >= 80 ? 'Strong' :
+                                                            d.scores[dimId] >= 50 ? 'Adequate' : 'Weak')}
+                                                </span>
+                                            </div>
                                         </td>
                                     ))}
                                 </tr>

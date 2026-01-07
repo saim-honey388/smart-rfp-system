@@ -43,8 +43,8 @@ class DiscoveredTable(BaseModel):
 class DiscoveredFormRow(BaseModel):
     """A single row from the proposal form (line item)."""
     section: Optional[str] = Field(default=None, description="Section this row belongs to")
-    item_id: str = Field(description="Item identifier (1, 2, Ad1, etc.)")
-    description: str = Field(description="Description of work")
+    item_id: Optional[str] = Field(default=None, description="Item identifier (1, 2, Ad1, etc.)")
+    description: Optional[str] = Field(default=None, description="Description of work")
     # Dynamic values dict - stores ALL column values with original column names
     values: Optional[Dict[str, str]] = Field(default=None, description="All column values keyed by column name")
     # Legacy fields for backward compatibility
@@ -116,7 +116,8 @@ class FormStructureAnalyzer:
             query = custom_query
             print(f"DEBUG: Using custom query: {query[:100]}...")
         else:
-            query = "Proposal Submission Form Bid Sheet Schedule of Values Unit Price Total Cost Extended Amount Pricing Table"
+            # Improved query - includes actual terms found in proposal forms
+            query = "Proposal Submission Description of Work Quantity Unit Unit Cost Total Item SF LF LS Structural Repairs"
         results = db.similarity_search(query, k=k)
         
         if not results:
@@ -134,73 +135,74 @@ class FormStructureAnalyzer:
             # Return the chunks that match the RFP section query
             return "\n\n".join([doc.page_content for doc in results])
 
-        # 2. For RFP extraction (no custom_query), identify page range
-        pages = []
+        # 2. For RFP extraction (no custom_query), identify relevant pages
+        found_pages = set()
         print("DEBUG: Search Results Candidates:")
         for doc in results:
             p = doc.metadata.get('page')
             if p is not None:
-                pages.append(int(p))
-                print(f" - Page {p}: {doc.page_content[:50]}...")
+                p_int = int(p)
+                found_pages.add(p_int)
+                print(f" - Page {p_int}: {doc.page_content[:50]}...")
         
-        if not pages:
+        if not found_pages:
             return "\n\n".join([doc.page_content for doc in results])
             
-        start_page = min(pages)
-        end_page = start_page + 12
-        
-        print(f"DEBUG: Form Anchor found at Page {start_page}. Fetching range {start_page}-{end_page}...")
+        # IMPROVED STRATEGY: Fetch all found pages + subsequent page (for table continuity)
+        # Instead of a single window, we fetch clusters of relevant content
+        pages_to_fetch = set()
+        for p in found_pages:
+            pages_to_fetch.add(p)
+            pages_to_fetch.add(p + 1)  # Add next page to capture tables spanning page headers
+            
+        sorted_pages = sorted(list(pages_to_fetch))
+        print(f"DEBUG: Form Context: Fetching {len(sorted_pages)} relevant pages: {sorted_pages}")
 
-        # 3. Fetch Contiguous Range
-        print(f"DEBUG: Fetching exact chunks for pages {start_page} to {end_page}...")
-        
         import re
-        # Pattern for dollar amounts like $4.10, $131,137.50, $1,295,648.70
-        dollar_pattern = re.compile(r'\$[\d,]+\.?\d*')
         
-        full_context_docs = []
-        docs_with_prices = []  # Chunks that contain actual dollar amounts
-        docs_without_prices = []  # Chunks without dollar amounts
+        # DYNAMIC APPROACH: Prioritize chunks that look like form tables
+        # Instead of just $ signs (which catch insurance text), look for table structure patterns
+        table_patterns = [
+            re.compile(r'\b(Unit Cost|Unit Price|Total|Quantity|Qty)\b', re.IGNORECASE),  # Column headers
+            re.compile(r'\b\d+\s*(SF|LF|LS|EA|CY|SY)\b', re.IGNORECASE),  # Quantity with units
+            re.compile(r'^[IVX]+\s+\w', re.MULTILINE),  # Roman numeral sections (I, II, III...)
+            re.compile(r'^\s*\d+\s+\w{3,}', re.MULTILINE),  # Line items starting with number
+        ]
         
-        for p in range(start_page, end_page + 1):
+        def score_chunk(text: str) -> int:
+            """Score a chunk based on how likely it is to be a form table."""
+            score = 0
+            for pattern in table_patterns:
+                if pattern.search(text):
+                    score += 1
+            return score
+        
+        all_chunks = []
+        for p in sorted_pages:
             try:
-                # Fetch chunks for this specific page
                 result = db.get(where={"page": p})
                 page_texts = result['documents']
                 if page_texts:
                     for text in page_texts:
-                        # Check if this chunk contains dollar amounts
-                        if dollar_pattern.search(text):
-                            docs_with_prices.append(text)
-                        else:
-                            docs_without_prices.append(text)
+                        all_chunks.append((score_chunk(text), p, text))
             except Exception as e:
                 print(f"WARN: Failed to fetch page {p}: {e}")
         
-        # PRIORITIZE chunks with dollar amounts (actual prices) over chunks without
-        # This ensures filled pricing tables come before blank templates
-        # LIMIT chunks without prices to prevent drowning out real data
-        MAX_BLANK_CHUNKS = 5  # Only include a few blank chunks for context
+        # Sort by score (highest first), then by page number
+        all_chunks.sort(key=lambda x: (-x[0], x[1]))
         
-        full_context_docs = docs_with_prices  # Price chunks come FIRST
+        # Take all high-scoring chunks + some lower-scoring for context
+        high_score_chunks = [c for c in all_chunks if c[0] >= 2]
+        low_score_chunks = [c for c in all_chunks if c[0] < 2][:10]  # Limit low-score chunks
         
-        # Only add a few blank chunks for context, not all of them
-        if len(docs_without_prices) > MAX_BLANK_CHUNKS:
-            docs_without_prices = docs_without_prices[:MAX_BLANK_CHUNKS]
+        selected_chunks = high_score_chunks + low_score_chunks
         
-        full_context_docs.extend(docs_without_prices)
+        print(f"DEBUG: Form Context: Retained {len(selected_chunks)} chunks from {len(sorted_pages)} pages")
+        print(f"  - High-score table chunks: {len(high_score_chunks)}")
+        print(f"  - Low-score context chunks: {len(low_score_chunks)}")
         
-        print(f"DEBUG: Form Context: Retained {len(full_context_docs)} chunks from pages {start_page}-{end_page}")
-        print(f"  - Chunks with prices ($): {len(docs_with_prices)}")
-        print(f"  - Chunks without prices (limited): {len(docs_without_prices)}")
-        
-        # Add a CLEAR SEPARATOR so AI knows which is the real data
-        if docs_with_prices:
-            price_section = "\\n\\n=== FILLED DATA WITH ACTUAL PRICES (EXTRACT FROM THIS) ===\\n\\n" + "\\n\\n".join(docs_with_prices)
-            blank_section = "\\n\\n=== TEMPLATE CONTEXT (FOR REFERENCE ONLY) ===\\n\\n" + "\\n\\n".join(docs_without_prices) if docs_without_prices else ""
-            return price_section + blank_section
-        else:
-            return "\\n\\n".join(full_context_docs)
+        # Return content without misleading separators
+        return "\n\n".join([c[2] for c in selected_chunks])
     
     def discover_form_structure(self, rfp_context: str) -> ProposalFormStructure:
         """
@@ -216,29 +218,20 @@ class FormStructureAnalyzer:
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert RFP Analyst specializing in construction bid documents.
 
-Your task is to analyze the RFP proposal submission form and discover its EXACT structure.
+Your task is to analyze the RFP proposal submission form and discover its structural schema.
 
 ANALYSIS STEPS:
-1. Find the "Proposal Submission" or "Bid Form" section in the document
-2. Identify ALL tables (Pricing Sections, General Conditions, Additions)
-3. List the EXACT column headers for each table
-4. Determine which columns are FIXED (same for all vendors) vs VENDOR-SPECIFIC (repeat per vendor)
-5. Extract all section headers (I, II, III, etc.)
-6. Extract all line items with their values
+1. Find the "Proposal Submission" or "Bid Form" section
+2. Identify the logical tables (e.g., Pricing Sections, Additions)
+3. List the EXACT column headers found
+4. Classify columns as FIXED (identifiers like Item, Description) vs VENDOR (values like Qty, Unit Cost, Total)
+5. Extract section headers
 
 COLUMN CLASSIFICATION RULES:
-- FIXED columns (appear once, same for all vendors):
-  * "Item", "Item #", "Line" - identifiers
-  * "Description", "Description of Work", "Scope" - work descriptions
-  
-- VENDOR columns (repeat for each vendor submission):
-  * "Quantity", "Qty", "Estimated Quantity" - amounts
-  * "Unit", "UOM" - units of measure
-  * "Unit Cost", "Unit Price", "Rate" - pricing
-  * "Total", "Extended Total", "Amount" - totals
-  * "%" - percentages (for General Conditions)
+- FIXED columns: "Item", "Description", "Scope"
+- VENDOR columns: "Quantity", "Unit", "Unit Cost", "Total", "%"
 
-Be PRECISE with column names - use the EXACT text from the document."""),
+Do NOT extract the actual row data values here. Just define the structure (schema)."""),
             ("user", """RFP Document Content:
 
 {rfp_content}
