@@ -1,2 +1,0 @@
-# Review service package placeholder.
-

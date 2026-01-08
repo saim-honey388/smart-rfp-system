@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from services.review.llm_client import complete_json
+from backend.src.utils.llm_client import complete_json
 
-PROMPT_PATH = Path("services/ingest/prompts/extract_details.txt")
+PROMPT_PATH = Path(__file__).parent / "prompts" / "extract_details.txt"
 
 
 def extract_details_with_ai(text: str) -> Dict[str, Any]:

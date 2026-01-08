@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
-from apps.api.schemas.chat import ChatRequest, ChatResponse, RFPChatRequest, RFPChatResponse
-from apps.api.services import chat_service, proposal_service
+from backend.schemas.chat import ChatRequest, ChatResponse, RFPChatRequest, RFPChatResponse
+from backend.services import chat_service, proposal_service
 
 router = APIRouter(tags=["chat"])
 
@@ -20,7 +20,7 @@ def chat_for_rfp_creation(body: RFPChatRequest):
     Stateful chat for creating an RFP. 
     Receives current state + message -> Returns new state + reply.
     """
-    from apps.api.services import rfp_consultant
+    from backend.services import rfp_consultant
     
     result = rfp_consultant.consult_on_rfp(
         message=body.message,

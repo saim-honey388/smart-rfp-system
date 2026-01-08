@@ -1,0 +1,18 @@
+Evaluate this proposal against the RFP requirements.
+
+Provide a JSON response with:
+{
+  "coverage_pct": <integer 0-100, percentage of requirements addressed>,
+  "risk": "LOW" | "MEDIUM" | "HIGH",
+  "price": <number or null, extracted price if found>,
+  "price_score": <integer 0-100>,
+  "scope_score": <integer 0-100>,
+  "clarity_score": <integer 0-100>,
+  "schedule_score": <integer 0-100>,
+  "overall_score": <integer 0-100>,
+  "summary": "<brief summary of proposal strengths and weaknesses>",
+  "experience": "<relevant vendor experience>",
+  "methodology": "<proposed methodology/approach>",
+  "warranties": "<warranty/guarantee terms>",
+  "timeline_details": "<schedule/timeline details>"
+}

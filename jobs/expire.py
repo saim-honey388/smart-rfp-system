@@ -4,9 +4,9 @@ from datetime import date
 
 from sqlmodel import select
 
-from apps.api.models.db import get_session
-from apps.api.models.entities import RfpModel, ProposalModel
-from apps.api.services.notification_service import send_expiry_email
+from backend.models.db import get_session
+from backend.models.entities import RfpModel, ProposalModel
+from backend.services.notification_service import send_expiry_email
 
 
 def run() -> int:

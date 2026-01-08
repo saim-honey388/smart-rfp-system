@@ -80,13 +80,20 @@ Get up and running in minutes. See [WORKFLOW.md](WORKFLOW.md) for the full tour.
 
 ### 1. Backend (Python)
 ```bash
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
-python -m apps.api.main
+
+# Run the server
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 2. Frontend (React)
 ```bash
-cd apps/client
+cd frontend
 npm install
 npm run dev
 ```

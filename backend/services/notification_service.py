@@ -4,9 +4,9 @@ import smtplib
 from email.message import EmailMessage
 from typing import Optional
 
-from apps.api.config.settings import settings
-from apps.api.schemas.review import ReviewResult
-from services.review.llm_client import complete
+from backend.config.settings import settings
+from backend.schemas.review import ReviewResult
+from backend.src.utils.llm_client import complete
 
 
 def _send_email(to_email: str, subject: str, body: str) -> None:

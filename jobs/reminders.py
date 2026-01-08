@@ -4,8 +4,8 @@ from datetime import date, timedelta
 
 from sqlmodel import select
 
-from apps.api.models.db import get_session
-from apps.api.models.entities import RfpModel
+from backend.models.db import get_session
+from backend.models.entities import RfpModel
 
 
 def run(days_before: int = 2) -> list[dict]:

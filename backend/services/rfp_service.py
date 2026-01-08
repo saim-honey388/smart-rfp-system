@@ -2,9 +2,9 @@ from typing import List, Optional
 
 from sqlmodel import select
 
-from apps.api.models.db import get_session
-from apps.api.models.entities import RfpModel
-from apps.api.schemas.rfp import Rfp, RfpCreate
+from backend.models.db import get_session
+from backend.models.entities import RfpModel
+from backend.schemas.rfp import Rfp, RfpCreate
 
 
 def list_rfps() -> List[Rfp]:

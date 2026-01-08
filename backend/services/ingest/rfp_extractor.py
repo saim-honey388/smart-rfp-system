@@ -3,7 +3,7 @@ import json
 import re
 from datetime import datetime
 from dateutil import parser as dateparser
-from services.review.llm_client import complete_json
+from backend.src.utils.llm_client import complete_json
 
 
 RFP_EXTRACTION_PROMPT = """

@@ -16,21 +16,22 @@ Open your terminal in the project root and run the following commands to start b
 
 #### Backend (API)
 ```bash
-# Navigate to the backend directory (or root if configured)
-# Assuming a virtual environment is active
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Start the FastAPI server
-python -m apps.api.main
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 # Server will run at: http://localhost:8000
 ```
 
 #### Frontend (Client)
 ```bash
-# Navigate to the client directory
-cd apps/client
+# Navigate to the frontend directory
+cd frontend
 
 # Install dependencies
 npm install

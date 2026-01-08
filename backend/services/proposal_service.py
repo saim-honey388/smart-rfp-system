@@ -2,9 +2,9 @@ from typing import List, Optional
 
 from sqlmodel import select
 
-from apps.api.models.db import get_session
-from apps.api.models.entities import ProposalModel
-from apps.api.schemas.proposal import Proposal, ProposalCreate
+from backend.models.db import get_session
+from backend.models.entities import ProposalModel
+from backend.schemas.proposal import Proposal, ProposalCreate
 
 
 def list_proposals(rfp_id: Optional[str] = None) -> List[Proposal]:

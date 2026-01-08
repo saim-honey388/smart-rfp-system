@@ -3,13 +3,13 @@ from datetime import date
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
-from apps.api.config.settings import settings
-from apps.api.schemas.proposal import Proposal, ProposalCreate
-from apps.api.schemas.review import ReviewResult
-from apps.api.services import notification_service, proposal_service, rfp_service
-from services.ingest.extractor import extract_text
-from services.ingest.parser import extract_emails
-from services.ingest.ai_extractor import extract_details_with_ai
+from backend.config.settings import settings
+from backend.schemas.proposal import Proposal, ProposalCreate
+from backend.schemas.review import ReviewResult
+from backend.services import notification_service, proposal_service, rfp_service
+from backend.services.ingest.extractor import extract_text
+from backend.services.ingest.parser import extract_emails
+from backend.services.ingest.ai_extractor import extract_details_with_ai
 
 router = APIRouter(tags=["proposals"])
 
@@ -244,8 +244,8 @@ async def upload_proposal(
     # We always update if we have new values to ensure persistence
     refreshed = proposal_service.get_proposal(proposal.id)
     if refreshed:
-        from apps.api.models.db import get_session
-        from apps.api.models.entities import ProposalModel
+        from backend.models.db import get_session
+        from backend.models.entities import ProposalModel
         with get_session() as session:
             db_p = session.get(ProposalModel, proposal.id)
             if db_p:
@@ -350,7 +350,7 @@ def reject_proposal(proposal_id: str):
     updated = proposal_service.set_status(proposal_id, "Rejected")
     if rfp and updated:
         # Use latest AI review to drive the explanation email.
-        from apps.api.services import review_service
+        from backend.services import review_service
 
         review_dict = review_service.get_review_summary(proposal_id)
         if review_dict:
@@ -381,8 +381,8 @@ async def get_proposal_matrix(rfp_id: str):
         get_cached_classification,
         build_cache
     )
-    from apps.api.models.db import get_session
-    from apps.api.models.entities import RfpModel
+    from backend.models.db import get_session
+    from backend.models.entities import RfpModel
 
     rfp = rfp_service.get_rfp(rfp_id)
     if not rfp:

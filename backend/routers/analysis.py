@@ -2,8 +2,8 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Depends
 
-from apps.api.services import rfp_service, proposal_service
-from services.review.llm_client import complete_json
+from backend.services import rfp_service, proposal_service
+from backend.src.utils.llm_client import complete_json
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 

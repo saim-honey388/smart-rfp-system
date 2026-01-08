@@ -1,13 +1,13 @@
 from statistics import mean
 from typing import Optional
 
-from apps.api.schemas.review import Comparison, ComparisonRow, ReviewResult, Finding
-from apps.api.services import proposal_service, rfp_service
-from services.review.llm_client import complete_json
+from backend.schemas.review import Comparison, ComparisonRow, ReviewResult, Finding
+from backend.services import proposal_service, rfp_service
+from backend.src.utils.llm_client import complete_json
 
 from pathlib import Path
 
-PROMPT_PATH = Path("services/review/prompts/evaluate_proposal.txt")
+PROMPT_PATH = Path(__file__).parent / "review" / "prompts" / "evaluate_proposal.txt"
 
 
 def _evaluate_with_ai(requirements: list[dict], proposal_text: str, summary_hint: str | None) -> dict:

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 
-from apps.api.schemas.review import Comparison
-from apps.api.services import review_service
-from apps.api.services.rfp_service import get_rfp
+from backend.schemas.review import Comparison
+from backend.services import review_service
+from backend.services.rfp_service import get_rfp
 
 router = APIRouter(tags=["reviews"])
 

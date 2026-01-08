@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from sqlmodel import Session, SQLModel, create_engine
 
-from apps.api.config.settings import settings
+from backend.config.settings import settings
 
 
 engine = create_engine(

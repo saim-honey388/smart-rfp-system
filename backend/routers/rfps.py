@@ -3,8 +3,8 @@ from io import BytesIO
 from fastapi import APIRouter, HTTPException, UploadFile, File, BackgroundTasks
 from fastapi.responses import StreamingResponse
 
-from apps.api.schemas.rfp import Rfp as RFP, RfpCreate as RFPCreate, RfpBase as RFPUpdate
-from apps.api.services import rfp_service, proposal_service, report_service
+from backend.schemas.rfp import Rfp as RFP, RfpCreate as RFPCreate, RfpBase as RFPUpdate
+from backend.services import rfp_service, proposal_service, report_service
 
 router = APIRouter(tags=["rfps"])
 
@@ -60,8 +60,8 @@ def upload_rfp(file: UploadFile = File(...)):
     Now also extracts the proposal form structure for vendor submissions.
     Does NOT save to DB yet, just returns extracted data for the frontend editor.
     """ 
-    from services.ingest.extractor import extract_text
-    from services.ingest.rfp_extractor import extract_rfp_details
+    from backend.services.ingest.extractor import extract_text
+    from backend.services.ingest.rfp_extractor import extract_rfp_details
     from backend.src.agents.ingestion import ingest_document
     from backend.src.agents.form_structure_analyzer import FormStructureAnalyzer
     import shutil

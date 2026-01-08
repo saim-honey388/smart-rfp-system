@@ -16,7 +16,8 @@ import difflib
 
 from backend.src.agents.form_structure_analyzer import (
     ProposalFormStructure,
-    DiscoveredFormRow
+    DiscoveredFormRow,
+    ColumnValuePair
 )
 from backend.src.agents.vendor_data_extractor import (
     VendorProposalData,
@@ -260,11 +261,23 @@ class ComparisonMatrixBuilder:
         # Convert FilledFormRows to DiscoveredFormRows
         new_rows = []
         for row in winner.filled_rows:
+            # Convert dict values to List[ColumnValuePair] format
+            values_list = None
+            if row.values:
+                if isinstance(row.values, dict):
+                    values_list = [
+                        ColumnValuePair(column=k, value=str(v) if v else "")
+                        for k, v in row.values.items()
+                    ]
+                elif isinstance(row.values, list):
+                    # Already a list, just validate format
+                    values_list = row.values
+            
             new_rows.append(DiscoveredFormRow(
                 section=row.section,
                 item_id=row.item_id,
                 description=row.description,
-                values=row.values # Reuse the values (Qty, Unit, etc) as defaults
+                values=values_list
             ))
             
         return ProposalFormStructure(

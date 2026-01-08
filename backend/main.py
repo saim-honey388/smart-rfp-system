@@ -5,9 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from apps.api.config.settings import settings
-from apps.api.models.db import init_db
-from apps.api.routers import analysis, chat, pages, proposals, reviews, rfps, comparisons
+from backend.config.settings import settings
+from backend.models.db import init_db
+from backend.routers import analysis, chat, pages, proposals, reviews, rfps, comparisons
 
 # ...
 
@@ -30,8 +30,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static assets (CSS/JS) for server-rendered templates.
-app.mount("/static", StaticFiles(directory="apps/web/static"), name="static")
+# Static assets (CSS/JS) for server-rendered templates - disabled after consolidation
+# app.mount("/static", StaticFiles(directory="apps/web/static"), name="static")
 app.mount("/storage", StaticFiles(directory=settings.storage_path), name="storage")
 
 # HTML page routes (no /api prefix).

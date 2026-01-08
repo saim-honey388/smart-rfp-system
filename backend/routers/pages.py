@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from apps.api.services import proposal_service, review_service, rfp_service
+from backend.services import proposal_service, review_service, rfp_service
 
 templates = Jinja2Templates(directory="apps/web/templates")
 

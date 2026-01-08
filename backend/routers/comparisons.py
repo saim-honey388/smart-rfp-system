@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlmodel import Session, select, desc
 
-from apps.api.models.db import get_session
-from apps.api.models.entities import SavedComparisonModel, RfpModel
+from backend.models.db import get_session
+from backend.models.entities import SavedComparisonModel, RfpModel
 
 router = APIRouter(tags=["comparisons"])
 print("DEBUG: Loading comparisons router with get_db fix")
@@ -27,7 +27,7 @@ class SavedComparisonCreate(SavedComparisonBase):
 
 # --- Dependency ---
 def get_db():
-    from apps.api.models.db import get_session
+    from backend.models.db import get_session
     with get_session() as session:
         yield session
 

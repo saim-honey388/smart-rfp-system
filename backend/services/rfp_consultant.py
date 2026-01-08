@@ -1,6 +1,6 @@
 import json
-from apps.api.schemas.chat import RFPState
-# from services.review.llm_client import complete_json
+from backend.schemas.chat import RFPState
+# from backend.src.utils.llm_client import complete_json
 
 SYSTEM_PROMPT = """You are an expert RFP Consultant AI. Your goal is to help the user define a robust Request for Proposal (RFP).
 You will receive the CURRENT STATE of the RFP and the user's latest message.
