@@ -9,7 +9,13 @@
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
 
-[**View Demo**](#-demo) · [**Documentation**](WORKFLOW.md) · [**Architecture**](docs/system-architecture.md)
+[**Documentation**](WORKFLOW.md) · [**Architecture**](docs/system-architecture.md)
+
+---
+
+[![Watch Demo](docs/images/ezgif.com-animated-gif-maker.gif)](https://drive.google.com/file/d/1p7Qom6bnGoPnj_k_okydY2Aqj_r7k1W0/view?usp=sharing)
+
+*👆 Click to watch full demo*
 
 </div>
 
@@ -49,28 +55,6 @@ flowchart LR
 | **⚖️ Comparison Matrix** | Side-by-side vendor comparison with automatic column classification and grand total calculations |
 | **📊 Visual Analytics** | Radar charts, bar charts, and scoring tables to visualize the "Best Fit" vendor across multiple dimensions |
 | **🎯 RFP Lifecycle Dashboard** | Track Open RFPs, Drafts, Saved Comparisons, and recent activity in one unified interface |
-
----
-
-## 🏗️ Architecture
-
-```
-/RFP System
-├── backend/                    # Python/FastAPI backend
-│   ├── main.py                 # Application entrypoint
-│   ├── routers/                # API route handlers
-│   ├── services/               # Business logic layer
-│   │   ├── ingest/             # PDF extraction services
-│   │   └── review/             # AI review & scoring
-│   └── src/agents/             # AI agent components
-├── frontend/                   # React + Vite frontend
-│   ├── src/components/         # React components
-│   └── src/pages/              # Page components
-├── data/chromadb/              # Vector database for embeddings
-└── storage/proposals/          # Uploaded proposal PDFs
-```
-
-> For complete architecture details, see [`docs/system-architecture.md`](docs/system-architecture.md)
 
 ---
 
@@ -162,40 +146,25 @@ USE_FALLBACK_PROVIDER=false
 
 ---
 
-## 🎥 Demo
+## �️ Architecture
 
-<div align="center">
+```
+/RFP System
+├── backend/                    # Python/FastAPI backend
+│   ├── main.py                 # Application entrypoint
+│   ├── routers/                # API route handlers
+│   ├── services/               # Business logic layer
+│   │   ├── ingest/             # PDF extraction services
+│   │   └── review/             # AI review & scoring
+│   └── src/agents/             # AI agent components
+├── frontend/                   # React + Vite frontend
+│   ├── src/components/         # React components
+│   └── src/pages/              # Page components
+├── data/chromadb/              # Vector database for embeddings
+└── storage/proposals/          # Uploaded proposal PDFs
+```
 
-[![Watch Demo](docs/images/ezgif.com-animated-gif-maker.gif)](https://drive.google.com/file/d/1p7Qom6bnGoPnj_k_okydY2Aqj_r7k1W0/view?usp=sharing)
-
-*Click to watch full demo*
-
-[![View Screenshots](https://img.shields.io/badge/📸_View_All_Screenshots-34A853?style=for-the-badge&logo=google-drive&logoColor=white)](https://drive.google.com/drive/folders/1K_I2kzRI2K7DYkH4y7h7mbCGqcxh-NzW?usp=sharing)
-
-</div>
-
-### Screenshots
-
-<div align="center">
-
-| Dashboard | RFP Management |
-|:---------:|:--------------:|
-| <img width="400" alt="Dashboard" src="docs/images/Dashboard Preview.png"> | <img width="400" alt="Open RFPs" src="docs/images/OPEN RFP_s.png"> |
-
-| AI Extraction | Comparison Report |
-|:-------------:|:-----------------:|
-| <img width="400" alt="AI Extracted" src="docs/images/AI extracted RFP.png"> | <img width="400" alt="Comparison" src="docs/images/Comparison Report.png"> |
-
-</div>
-
----
-
-## 📖 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [**WORKFLOW.md**](WORKFLOW.md) | Complete user journey and demo walkthrough |
-| [**System Architecture**](docs/system-architecture.md) | Technical architecture, data models, and API endpoints |
+> For complete architecture details, see [`docs/system-architecture.md`](docs/system-architecture.md)
 
 ---
 
@@ -213,6 +182,15 @@ USE_FALLBACK_PROVIDER=false
 | `POST` | `/api/chat/proposal` | Chat about a proposal |
 
 > Full API documentation available at `http://localhost:8000/docs` when running locally.
+
+---
+
+## 📖 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [**WORKFLOW.md**](WORKFLOW.md) | Complete user journey and demo walkthrough |
+| [**System Architecture**](docs/system-architecture.md) | Technical architecture, data models, and API endpoints |
 
 ---
 
