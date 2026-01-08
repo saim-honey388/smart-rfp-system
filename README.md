@@ -193,24 +193,7 @@ USE_FALLBACK_PROVIDER=false
 
 > For complete architecture details, see [`docs/system-architecture.md`](docs/system-architecture.md)
 
----
 
-## 🔌 API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/rfps` | List all RFPs |
-| `POST` | `/api/rfps` | Create new RFP |
-| `POST` | `/api/rfps/upload` | Upload RFP PDF |
-| `POST` | `/api/proposals/upload` | Upload proposal PDF |
-| `POST` | `/api/proposals/{id}/approve` | Approve proposal |
-| `POST` | `/api/proposals/{id}/reject` | Reject proposal |
-| `GET` | `/api/proposals/{rfp_id}/matrix` | Get comparison matrix |
-| `POST` | `/api/chat/proposal` | Chat about a proposal |
-
-> Full API documentation available at `http://localhost:8000/docs` when running locally.
-
----
 
 ## 📖 Documentation
 
