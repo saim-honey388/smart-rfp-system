@@ -391,6 +391,64 @@ async def get_proposal_matrix(rfp_id: str):
     proposals = proposal_service.list_proposals(rfp_id=rfp_id)
     rfp_rows = rfp.proposal_form_rows or []
     
+    # Consensus Logic: If RFP has no rows, try to elect a structure from proposals
+    if not rfp_rows and proposals:
+        try:
+            from backend.src.agents.comparison_matrix_builder import ComparisonMatrixBuilder
+            from backend.src.agents.vendor_data_extractor import VendorProposalData, FilledFormRow
+            
+            # Convert DB proposals to VendorProposalData objects for the builder
+            vendor_proposals = []
+            for p in proposals:
+                if p.proposal_form_data:
+                    filled_rows = []
+                    for row in p.proposal_form_data:
+                        # Convert dict back to FilledFormRow key-value pairs
+                        # Note: proposal_form_data in DB is a list of dicts with keys matching schema
+                        # We need to adapt it to what FilledFormRow expects if it's different
+                        # But ComparisonMatrixBuilder uses checking of 'values' dict mostly.
+                        # Let's check how VendorProposalData expects it.
+                        # It expects filled_rows to be list of DynamicFilledRow/FilledFormRow
+                        
+                        # Simplification: Assume the dict in DB *IS* the row data
+                        # We need to map it to a structure with 'values' dict or similar
+                        
+                        # Strategy: Adapt DB dict to 'values' dict
+                        values_dict = {
+                            k: (str(v) if v is not None else "") 
+                            for k, v in row.items() 
+                            if k not in ["item_id", "description", "section"]
+                        }
+                        
+                        filled_rows.append(FilledFormRow(
+                            section=row.get("section", ""),
+                            item_id=row.get("item_id", ""),
+                            description=row.get("description", ""),
+                            values=values_dict
+                        ))
+                    
+                    vendor_proposals.append(VendorProposalData(
+                        proposal_id=str(p.id),
+                        rfp_id=str(rfp.id),
+                        vendor_name=p.contractor or "Unknown",
+                        filled_rows=filled_rows
+                    ))
+            
+            # Elect structure
+            if vendor_proposals:
+                builder = ComparisonMatrixBuilder()
+                elected_structure = builder._elect_structure_from_proposals(vendor_proposals)
+                
+                if elected_structure and elected_structure.rows:
+                    print(f"✓ Elected consensus structure from proposals: {len(elected_structure.rows)} rows")
+                    # Convert elected rows back to list of dicts for this endpoint
+                    rfp_rows = [r.model_dump() for r in elected_structure.rows]
+                    
+                    # Also update valid columns if possible
+                    # But the rest of the function determines that.
+        except Exception as e:
+            print(f"⚠ Consensus election failed: {e}")
+
     if not rfp_rows:
         return {
             "rfp_title": rfp.title,

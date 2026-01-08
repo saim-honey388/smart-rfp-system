@@ -29,8 +29,8 @@ export function ToastProvider({ children }) {
                         className="animate-slide-up pointer-events-auto min-w-[300px] max-w-sm bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 rounded-xl p-4 flex items-start gap-3"
                     >
                         <div className={`mt-0.5 ${toast.type === 'success' ? 'text-green-500' :
-                                toast.type === 'error' ? 'text-red-500' :
-                                    'text-blue-500'
+                            toast.type === 'error' ? 'text-red-500' :
+                                'text-blue-500'
                             }`}>
                             {toast.type === 'success' && <CheckCircle size={20} />}
                             {toast.type === 'error' && <AlertCircle size={20} />}

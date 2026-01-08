@@ -1,1 +1,90 @@
-{"dimensions":[{"id":"cost","name":"Cost","description":"Total budget for the HVAC preventive maintenance and repairs.","weight":10,"keywords":["price","budget","cost","fee"],"type":"general"},{"id":"timeline","name":"Timeline","description":"Expected schedule for the completion of maintenance and repair services.","weight":8,"keywords":["schedule","deadline","date","time"],"type":"general"},{"id":"experience","name":"Experience","description":"Contractor's track record in providing HVAC maintenance and repair services.","weight":9,"keywords":["track record","past performance","years"],"type":"general"},{"id":"preventive_maintenance","name":"Preventive Maintenance","description":"Quality and thoroughness of quarterly preventive maintenance inspections.","weight":7,"keywords":["preventive maintenance","inspections","service quality"],"type":"dynamic"},{"id":"emergency_response","name":"Emergency Response","description":"Availability and efficiency of emergency repair services.","weight":9,"keywords":["emergency","24/7","response time"],"type":"dynamic"},{"id":"equipment_expertise","name":"Equipment Expertise","description":"Knowledge and experience with rooftop units and split systems.","weight":8,"keywords":["HVAC systems","rooftop units","split systems"],"type":"dynamic"},{"id":"parts_replacement","name":"Parts Replacement","description":"Ability to handle minor parts replacement and manage major parts approval.","weight":6,"keywords":["parts replacement","maintenance","approval"],"type":"dynamic"}]}
+{
+    "dimensions": [
+        {
+            "id": "cost",
+            "name": "Cost",
+            "description": "Total budget for the HVAC preventive maintenance and repairs.",
+            "weight": 10,
+            "keywords": [
+                "price",
+                "budget",
+                "cost",
+                "fee"
+            ],
+            "type": "general"
+        },
+        {
+            "id": "timeline",
+            "name": "Timeline",
+            "description": "Expected schedule for the completion of maintenance and repair services.",
+            "weight": 8,
+            "keywords": [
+                "schedule",
+                "deadline",
+                "date",
+                "time"
+            ],
+            "type": "general"
+        },
+        {
+            "id": "experience",
+            "name": "Experience",
+            "description": "Contractor's track record in providing HVAC maintenance and repair services.",
+            "weight": 9,
+            "keywords": [
+                "track record",
+                "past performance",
+                "years"
+            ],
+            "type": "general"
+        },
+        {
+            "id": "preventive_maintenance",
+            "name": "Preventive Maintenance",
+            "description": "Quality and thoroughness of quarterly preventive maintenance inspections.",
+            "weight": 7,
+            "keywords": [
+                "preventive maintenance",
+                "inspections",
+                "service quality"
+            ],
+            "type": "dynamic"
+        },
+        {
+            "id": "emergency_response",
+            "name": "Emergency Response",
+            "description": "Availability and efficiency of emergency repair services.",
+            "weight": 9,
+            "keywords": [
+                "emergency",
+                "24/7",
+                "response time"
+            ],
+            "type": "dynamic"
+        },
+        {
+            "id": "equipment_expertise",
+            "name": "Equipment Expertise",
+            "description": "Knowledge and experience with rooftop units and split systems.",
+            "weight": 8,
+            "keywords": [
+                "HVAC systems",
+                "rooftop units",
+                "split systems"
+            ],
+            "type": "dynamic"
+        },
+        {
+            "id": "parts_replacement",
+            "name": "Parts Replacement",
+            "description": "Ability to handle minor parts replacement and manage major parts approval.",
+            "weight": 6,
+            "keywords": [
+                "parts replacement",
+                "maintenance",
+                "approval"
+            ],
+            "type": "dynamic"
+        }
+    ]
+}

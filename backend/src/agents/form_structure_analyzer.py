@@ -61,6 +61,7 @@ class ProposalFormStructure(BaseModel):
     fixed_columns: List[str] = Field(description="Column names that are SAME across all vendors (typically Item, Description)")
     vendor_columns: List[str] = Field(description="Column names that REPEAT for each vendor (typically Quantity, Unit, Unit Cost, Total)")
     sections: List[str] = Field(description="All section names found (e.g., 'I Structural', 'II Balcony')")
+    rows: Optional[List['DiscoveredFormRow']] = Field(default=None, description="The extracted rows (optional)")
 
 
 class FullProposalFormAnalysis(BaseModel):
