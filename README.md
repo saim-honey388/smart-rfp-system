@@ -32,42 +32,31 @@
 - 📊 **Decide with confidence** → Visual reports, radar charts, and AI-scored rankings surface the best-fit vendor
 
 ```mermaid
-flowchart TB
-    subgraph INPUT["📥 Document Upload"]
-        RFP[Upload RFP PDF]
-        PROP1[Vendor A Proposal]
-        PROP2[Vendor B Proposal]
-        PROP3[Vendor C Proposal]
+flowchart LR
+    subgraph Upload["� Upload"]
+        A[RFP Document]
+        B[Vendor Proposals]
     end
 
-    subgraph EXTRACT["🤖 AI Extraction Engine"]
-        RFP --> SCHEMA[Discover Form Schema]
-        PROP1 --> PARSE1[Extract Pricing & Terms]
-        PROP2 --> PARSE2[Extract Pricing & Terms]
-        PROP3 --> PARSE3[Extract Pricing & Terms]
-        SCHEMA --> ALIGN[Align Vendor Data to Schema]
-        PARSE1 --> ALIGN
-        PARSE2 --> ALIGN
-        PARSE3 --> ALIGN
+    subgraph AI["🤖 AI Engine"]
+        C[PDF Extraction]
+        D[Data Parsing]
+        E[Schema Alignment]
     end
 
-    subgraph STORE["💾 Data Layer"]
-        ALIGN --> VECTOR[(ChromaDB Embeddings)]
-        ALIGN --> DB[(SQLite Database)]
+    subgraph Output["� Results"]
+        F[Comparison Matrix]
+        G[Visual Reports]
+        H[AI Chat]
     end
 
-    subgraph ANALYZE["📊 Analysis & Comparison"]
-        DB --> MATRIX[Comparison Matrix]
-        DB --> SCORE[AI Scoring Engine]
-        VECTOR --> CHAT[Proposal Chat]
-        MATRIX --> REPORT[Visual Reports]
-        SCORE --> REPORT
-    end
-
-    subgraph DECIDE["✅ Decision"]
-        REPORT --> WINNER[Select Winner]
-        CHAT --> WINNER
-    end
+    A --> C
+    B --> D
+    C --> E
+    D --> E
+    E --> F
+    E --> G
+    E --> H
 ```
 
 ---
