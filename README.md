@@ -27,33 +27,20 @@
 
 ```mermaid
 flowchart TB
-    subgraph INPUT["1. Input"]
-        RFP[RFP Created] --> UPLOAD[PDF Uploaded]
+    subgraph INPUT["1. Upload"]
+        RFP[RFP PDF] --> PROPS[Vendor Proposals]
     end
 
-    subgraph INGEST["2. Ingestion"]
-        UPLOAD --> EXTRACT[Extract Text]
-        EXTRACT --> EMBED[Create Embeddings]
-        EMBED --> CHROMA[(ChromaDB)]
+    subgraph PROCESS["2. AI Processing"]
+        PROPS --> EXTRACT[Extract & Embed]
+        EXTRACT --> CHROMA[(ChromaDB)]
+        CHROMA --> DB[(SQLite)]
     end
 
-    subgraph ANALYZE["3. AI Analysis"]
-        CHROMA --> SCHEMA[Discover Form Schema]
-        SCHEMA --> VALUES[Extract Vendor Values]
-        VALUES --> DB[(SQLite DB)]
-    end
-
-    subgraph INTERACT["4. User Interaction"]
-        DB --> CHAT[Proposal Chat]
+    subgraph OUTPUT["3. Results"]
         DB --> COMPARE[Comparison Matrix]
-        DB --> REPORT[Generate Reports]
-    end
-
-    subgraph OUTPUT["5. Decisions"]
-        COMPARE --> ACCEPT[Accept Proposal]
-        COMPARE --> REJECT[Reject Proposal]
-        ACCEPT --> NOTIFY[Send Notifications]
-        REJECT --> NOTIFY
+        DB --> REPORT[Comparison Report]
+        DB --> CHAT[AI Chat]
     end
 ```
 
