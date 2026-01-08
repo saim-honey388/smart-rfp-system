@@ -44,7 +44,19 @@ Procurement teams are drowning in PDFs. **Smart RFP** parses them for you.
 
 ---
 
-## 🎨 Key Features
+## � Demo
+
+> **Watch the full walkthrough of the Smart RFP System in action!**
+
+<div align="center">
+  <a href="https://drive.google.com/file/d/1GMgWgj_cmm80Xt4SbqCokQ7-sMXcWKos/view?usp=sharing">
+    <img src="https://img.shields.io/badge/▶_Watch_Demo-4285F4?style=for-the-badge&logo=google-drive&logoColor=white" alt="Watch Demo on Google Drive" />
+  </a>
+</div>
+
+---
+
+## �🎨 Key Features
 
 | Feature | Description |
 | :--- | :--- |
