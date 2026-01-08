@@ -110,7 +110,7 @@ async def ai_semantic_classify(
     """
     from backend.src.utils.ai_client import get_chat_llm
     
-    llm = get_chat_llm(model="gpt-4o-mini", temperature=0)
+    llm = get_chat_llm(model="gpt-4o", temperature=0)
     
     prompt = f"""You are classifying a column in a proposal comparison matrix.
 

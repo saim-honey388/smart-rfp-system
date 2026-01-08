@@ -40,6 +40,26 @@ npm run dev
 # App will run at: http://localhost:5173
 ```
 
+#### Environment Configuration
+Create a `.env` file in the project root:
+
+```bash
+# Database
+DATABASE_URL=sqlite:///./rfp.db
+STORAGE_PATH=storage
+
+# OpenAI (Required)
+OPENAI_API_KEY=sk-your-key-here
+OPENAI_MODEL=gpt-4o
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+
+# Fallback (Optional)
+GROQ_API_KEY=gsk-your-groq-key  # Fallback if OpenAI unavailable
+USE_FALLBACK_PROVIDER=false
+```
+
+> **Note**: The AI features require a valid OpenAI API key. Without it, the system will attempt to use Groq as a fallback (if configured).
+
 ---
 
 ## 📖 2. User Journey & Demo Walkthrough

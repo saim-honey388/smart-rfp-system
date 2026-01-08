@@ -91,6 +91,25 @@ npm install
 npm run dev
 ```
 
+### 3. Environment Setup (Required)
+Create a `.env` file in the project root with the following configuration:
+
+```bash
+# Required: OpenAI API Key
+OPENAI_API_KEY=your-openai-api-key-here
+
+# AI Model Configuration (defaults shown)
+OPENAI_MODEL=gpt-4o
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+
+# Optional: Fallback to Groq if OpenAI unavailable
+GROQ_API_KEY=your-groq-api-key  # Optional fallback
+USE_FALLBACK_PROVIDER=false     # Set to 'true' to force fallback
+```
+
+> [!IMPORTANT]
+> The system uses **OpenAI GPT-4o** for AI extraction and **text-embedding-3-large** for document embeddings. You must provide a valid `OPENAI_API_KEY` for the system to function.
+
 ---
 
 ## 📸 Gallery

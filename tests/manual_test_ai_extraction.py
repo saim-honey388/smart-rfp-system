@@ -14,7 +14,7 @@ from services.ingest.ai_extractor import extract_details_with_ai
 
 pdf_path = "/home/linux/Projects/RFP System/Property Proposal 1.pdf"
 
-print(f"Extracting text from: {pdf_path}")
+print(f"Extracting text from: {pdf_path}") 
 try:
     text = extract_text(pdf_path)
     print(f"Extracted {len(text)} characters.")

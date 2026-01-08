@@ -29,7 +29,7 @@ class FilledProposal(ProposalSchema):
 class BidEstimator:
     def __init__(self):
         # Use unified client with OpenAI-first, Groq fallback
-        self.llm = get_chat_llm(model="gpt-4o", temperature=0)
+        self.llm = get_chat_llm(model=None, temperature=0)
         self.parser = JsonOutputParser(pydantic_object=FilledProposal)
         self.chroma_path = os.path.abspath(os.path.join(os.getcwd(), "data/chromadb"))
         # Use unified embeddings with OpenAI-first, HuggingFace fallback

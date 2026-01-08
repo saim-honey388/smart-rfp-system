@@ -1,6 +1,6 @@
 import json
 from apps.api.schemas.chat import RFPState
-from services.review.llm_client import complete_json
+# from services.review.llm_client import complete_json
 
 SYSTEM_PROMPT = """You are an expert RFP Consultant AI. Your goal is to help the user define a robust Request for Proposal (RFP).
 You will receive the CURRENT STATE of the RFP and the user's latest message.
@@ -31,18 +31,39 @@ Your responsibilities:
 {current_state_json}
 
 **Respond with STRICT JSON ONLY:**
-{
+{{
   "reply": "Your conversational response here...",
-  "updated_state": {
+  "updated_state": {{
       "title": "...",
       "scope": "...",
       "requirements": ["req1", "req2"],
       "budget": "...",
       "timeline_end": "..."
-  },
+  }},
   "generate_proposal_form": null
-}
+}}
 """
+
+from backend.src.utils.ai_client import get_chat_llm
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, Field
+from typing import Optional, List
+
+# Define explicit state model for structured output (mirrors RFPState from schemas)
+class RFPStateOutput(BaseModel):
+    """Explicit RFP state for OpenAI structured output compatibility."""
+    title: str = Field(default="", description="RFP title")
+    scope: str = Field(default="", description="Project scope")
+    requirements: List[str] = Field(default_factory=list, description="List of requirements")
+    budget: str = Field(default="", description="Budget amount")
+    timeline_end: str = Field(default="", description="Due date in YYYY-MM-DD format")
+
+# Define the expected output structure with explicit types (OpenAI native structured output)
+class RFPConsultantResponse(BaseModel):
+    reply: str = Field(description="Conversational response to the user")
+    updated_state: RFPStateOutput = Field(description="The updated RFP state object")
+    generate_proposal_form: Optional[bool] = Field(default=None, description="Whether to generate a proposal form")
 
 def consult_on_rfp(message: str, current_state: RFPState, history: list[dict]) -> dict:
     """
@@ -52,47 +73,57 @@ def consult_on_rfp(message: str, current_state: RFPState, history: list[dict]) -
     
     try:
         # Debug logging
-        with open("/tmp/rfp_debug.log", "a") as f:
-            f.write(f"Incoming message: {message}\n")
-            f.write(f"Current State: {current_state}\n")
+        try:
+            with open("/tmp/rfp_debug.log", "a") as f:
+                f.write(f"Incoming message: {message}\n")
+                f.write(f"Current State: {current_state}\n")
+        except:
+            pass
 
         state_json = current_state.model_dump_json()
         
-        # Construct conversation history string for context
-        # Limit history to last 10 messages to save context window
+        # Construct conversation history string
         history_text = ""
-        for msg in history[-10:]:
+        for msg in history[-20:]:
             role = "AI" if msg.get("role") == "ai" else "User"
             text = msg.get("text", "")
             history_text += f"{role}: {text}\n"
 
-        # prompt construction
-        final_prompt = f"""
-Conversation History:
+        # Initialize LLM with default settings (GPT-4o)
+        llm = get_chat_llm(temperature=0.7)
+        # Use OpenAI native structured output (requires explicit Pydantic models, no generic dict)
+        structured_llm = llm.with_structured_output(RFPConsultantResponse)
+        
+        # Use LangChain variable substitution for current_state_json instead of string replacement
+        # This prevents the JSON braces in state_json from confusing the PromptTemplate
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", SYSTEM_PROMPT),
+            ("user", """Conversation History:
 {history_text}
 
 User's Latest Message:
-{message}
-"""
+{message}""")
+        ])
         
-        formatted_system = SYSTEM_PROMPT.replace("{current_state_json}", state_json)
-
-        response = complete_json(formatted_system, final_prompt, temperature=0.7)
+        chain = prompt | structured_llm
         
-        # Validation fallback
-        if "reply" not in response or "updated_state" not in response:
-             raise ValueError("Missing keys in AI response")
+        response = chain.invoke({
+            "current_state_json": state_json,
+            "history_text": history_text,
+            "message": message
+        })
         
-        # Ensure generate_proposal_form key exists
-        if "generate_proposal_form" not in response:
-            response["generate_proposal_form"] = None
-             
-        return response
+        # Convert Pydantic result back to dict
+        return response.model_dump()
 
     except Exception as e:
-        with open("/tmp/rfp_debug.log", "a") as f:
-            f.write(f"ERROR: {str(e)}\n")
-            f.write(traceback.format_exc())
+        import traceback
+        try:
+            with open("/tmp/rfp_debug.log", "a") as f:
+                f.write(f"ERROR: {str(e)}\n")
+                f.write(traceback.format_exc())
+        except:
+            pass
             
         print(f"AI Error: {e}")
         # Fallback if AI fails

@@ -1,5 +1,8 @@
 
 import json
+import re
+from datetime import datetime
+from dateutil import parser as dateparser
 from services.review.llm_client import complete_json
 
 
@@ -35,6 +38,42 @@ Respond with STRICT JSON only:
 }
 """
 
+
+def normalize_date(date_str: str) -> str:
+    """
+    Normalize various date formats to YYYY-MM-DD.
+    Returns 'TBD' if parsing fails or input is TBD.
+    """
+    if not date_str or date_str.upper() == "TBD":
+        return "TBD"
+    
+    try:
+        # Try parsing with dateutil (handles most formats)
+        parsed = dateparser.parse(date_str, fuzzy=True)
+        if parsed:
+            return parsed.strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        pass
+    
+    # Fallback: try common patterns manually
+    patterns = [
+        (r'(\d{4})-(\d{2})-(\d{2})', '%Y-%m-%d'),  # Already correct format
+        (r'(\d{2})/(\d{2})/(\d{4})', '%m/%d/%Y'),  # MM/DD/YYYY
+        (r'(\d{2})-(\d{2})-(\d{4})', '%m-%d-%Y'),  # MM-DD-YYYY
+    ]
+    
+    for pattern, fmt in patterns:
+        match = re.search(pattern, date_str)
+        if match:
+            try:
+                parsed = datetime.strptime(match.group(0), fmt)
+                return parsed.strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+    
+    return "TBD"
+
+
 def extract_rfp_details(text: str) -> dict:
     """
     Extracts structured RFP details from raw text using LLM.
@@ -58,6 +97,11 @@ def extract_rfp_details(text: str) -> dict:
         }
         
         result = {**defaults, **response}
+        
+        # Normalize dates to YYYY-MM-DD format
+        result["timeline_start"] = normalize_date(result.get("timeline_start", "TBD"))
+        result["timeline_end"] = normalize_date(result.get("timeline_end", "TBD"))
+        
         print(f"DEBUG: Final Extracted Result: {result.get('title')} | Start: {result.get('timeline_start')} | End: {result.get('timeline_end')}")
         return result
 

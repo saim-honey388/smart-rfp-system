@@ -47,7 +47,7 @@ class AIFormGenerator:
     Used in the AI Consultant flow when user opts to create a proposal form.
     """
     
-    def __init__(self, model: str = "gpt-4o", temperature: float = 0.3):
+    def __init__(self, model: Optional[str] = None, temperature: float = 0.3):
         # Slightly higher temperature for creative generation
         # Use unified client with OpenAI-first, Groq fallback
         self.llm = get_chat_llm(model=model, temperature=temperature)

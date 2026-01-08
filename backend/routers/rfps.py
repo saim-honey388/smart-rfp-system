@@ -16,6 +16,7 @@ def list_rfps():
 
 @router.post("/rfps", response_model=RFP, status_code=201)
 def create_rfp(payload: RFPCreate):
+    print(f"DEBUG: Received RFP create payload: {payload.model_dump()}")
     return rfp_service.create_rfp(payload)
 
 

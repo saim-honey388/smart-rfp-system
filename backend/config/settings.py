@@ -12,7 +12,8 @@ class Settings:
         self.database_url = os.getenv("DATABASE_URL", "sqlite:///./rfp.db")
         self.storage_path = os.getenv("STORAGE_PATH", "storage")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        self.openai_embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
         # Groq fallback configuration
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")

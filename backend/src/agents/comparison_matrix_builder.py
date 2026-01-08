@@ -162,18 +162,32 @@ class ComparisonMatrixBuilder:
         
         return pd.DataFrame(rows)
 
-    def _get_value_insensitive(self, values_dict: Dict[str, Any], key: str) -> str:
-        """Helper to get value from dict with case-insensitive key."""
-        if not values_dict:
+    def _get_value_insensitive(self, values_data, key: str) -> str:
+        """Helper to get value with case-insensitive key. Supports both Dict and List[ColumnValuePair]."""
+        if not values_data:
             return ""
-        # Direct match
-        if key in values_dict:
-            return str(values_dict[key])
-        # Case insensitive
-        key_lower = key.lower()
-        for k, v in values_dict.items():
-            if k.lower() == key_lower:
-                return str(v)
+        
+        # Handle List[ColumnValuePair] format (new OpenAI-compatible format)
+        if isinstance(values_data, list):
+            key_lower = key.lower()
+            for item in values_data:
+                # Handle both Pydantic model and dict
+                col = item.column if hasattr(item, 'column') else item.get('column', '')
+                val = item.value if hasattr(item, 'value') else item.get('value', '')
+                if col.lower() == key_lower:
+                    return str(val)
+            return ""
+        
+        # Handle Dict format (legacy)
+        if isinstance(values_data, dict):
+            # Direct match
+            if key in values_data:
+                return str(values_data[key])
+            # Case insensitive
+            key_lower = key.lower()
+            for k, v in values_data.items():
+                if k.lower() == key_lower:
+                    return str(v)
         return ""
 
     def _elect_structure_from_proposals(self, vendor_proposals: List[VendorProposalData]) -> Optional[ProposalFormStructure]:
@@ -225,11 +239,16 @@ class ComparisonMatrixBuilder:
         # Check the first row's values to see what columns exist
         vendor_cols = []
         if winner.filled_rows:
-            # Get all keys from the values dict (which holds the dynamic columns)
+            # Get all keys from the values (which holds the dynamic columns)
             # Use the first row as a sample
             sample_values = winner.filled_rows[0].values
             if sample_values:
-                vendor_cols = list(sample_values.keys())
+                # Handle List[ColumnValuePair] format (new)
+                if isinstance(sample_values, list):
+                    vendor_cols = [item.column if hasattr(item, 'column') else item.get('column', '') for item in sample_values]
+                # Handle Dict format (legacy)
+                elif isinstance(sample_values, dict):
+                    vendor_cols = list(sample_values.keys())
                 print(f"  Election: Discovered dynamic columns from DB: {vendor_cols}")
         
         # Fallback if no dynamic columns found (e.g. valid structure but empty values?)

@@ -40,13 +40,19 @@ class DiscoveredTable(BaseModel):
     section_headers: Optional[List[str]] = Field(default=None, description="Section headers within table (e.g., 'I Structural', 'II Balcony Restoration')")
 
 
+class ColumnValuePair(BaseModel):
+    """A single column-value pair for dynamic form data (OpenAI struct output compatible)."""
+    column: str = Field(description="The column name (e.g., 'Quantity', 'Unit Cost')")
+    value: str = Field(description="The value for this column")
+
+
 class DiscoveredFormRow(BaseModel):
     """A single row from the proposal form (line item)."""
     section: Optional[str] = Field(default=None, description="Section this row belongs to")
     item_id: Optional[str] = Field(default=None, description="Item identifier (1, 2, Ad1, etc.)")
     description: Optional[str] = Field(default=None, description="Description of work")
-    # Dynamic values dict - stores ALL column values with original column names
-    values: Optional[Dict[str, str]] = Field(default=None, description="All column values keyed by column name")
+    # Dynamic values as List of key-value pairs (OpenAI native structured output compatible)
+    values: Optional[List[ColumnValuePair]] = Field(default=None, description="All column values as list of key-value pairs")
     # Legacy fields for backward compatibility
     quantity: Optional[str] = Field(default=None, description="Quantity value")
     unit: Optional[str] = Field(default=None, description="Unit of measure")
@@ -84,7 +90,7 @@ class FormStructureAnalyzer:
     This replaces the hardcoded schema approach with AI-driven discovery.
     """
     
-    def __init__(self, model: str = "gpt-4o", temperature: float = 0):
+    def __init__(self, model: Optional[str] = None, temperature: float = 0):
         # Use unified client with OpenAI-first, Groq fallback
         self.llm = get_chat_llm(model=model, temperature=temperature)
         self.chroma_path = os.path.abspath(os.path.join(os.getcwd(), "data/chromadb"))

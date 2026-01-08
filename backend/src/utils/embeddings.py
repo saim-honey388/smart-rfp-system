@@ -101,10 +101,21 @@ def get_embedding_info() -> dict:
         dict with embedding provider info
     """
     use_hf = USE_FALLBACK or not OPENAI_API_KEY
+    
+    # Determine dimensions based on model
+    if use_hf:
+        dimensions = 1024  # bge-large-en-v1.5 = 1024
+    else:
+        # OpenAI embedding dimensions
+        if "large" in OPENAI_EMBEDDING_MODEL:
+            dimensions = 3072  # text-embedding-3-large
+        else:
+            dimensions = 1536  # text-embedding-3-small and ada-002
+    
     return {
         "provider": "huggingface" if use_hf else "openai",
         "model": HUGGINGFACE_EMBEDDING_MODEL if use_hf else OPENAI_EMBEDDING_MODEL,
-        "dimensions": 1024 if use_hf else 1536,  # bge-large-en-v1.5 = 1024, OpenAI = 1536
+        "dimensions": dimensions,
         "using_fallback": USE_FALLBACK
     }
 

@@ -82,7 +82,7 @@ class VendorDataExtractor:
     ensuring proper alignment for comparison.
     """
     
-    def __init__(self, model: str = "gpt-4o", temperature: float = 0):
+    def __init__(self, model: Optional[str] = None, temperature: float = 0):
         # Use unified client with OpenAI-first, Groq fallback
         self.llm = get_chat_llm(model=model, temperature=temperature)
         self.chroma_path = os.path.abspath(os.path.join(os.getcwd(), "data/chromadb"))
