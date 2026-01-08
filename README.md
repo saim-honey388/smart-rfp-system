@@ -1,160 +1,228 @@
 <div align="center">
-  <a href="https://github.com/saim-honey388/smart-rfp-system">
-    <img src="docs/images/logo-placeholder.png" alt="Logo" width="120" height="120">
-  </a>
 
-  <h1 align="center">Smart RFP System</h1>
+# 🚀 Smart RFP System
 
-  <p align="center">
-    <strong>AI-Powered Procurement & Proposal Management</strong>
-    <br />
-    <br />
-    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" /></a>
-    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" /></a>
-    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" /></a>
-    <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" /></a>
-    <br />
-    <br />
-    <a href="#-demo"><strong>Explore the Demo »</strong></a>
-    ·
-    <a href="WORKFLOW.md"><strong>Read Docs »</strong></a>
-    ·
-    <a href="#-feedback"><strong>Report Bug »</strong></a>
-  </p>
-</div>
+### AI-Powered Procurement & Proposal Management Platform
 
-<br />
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
 
-> [!NOTE]
-> **Mission Statement**: To transform manual, error-prone procurement processes into instant, data-driven decisions using state-of-the-art AI.
+[**View Demo**](#-demo) · [**Documentation**](WORKFLOW.md) · [**Architecture**](docs/system-architecture.md)
 
-<div align="center">
-  <img src="docs/images/dashboard-hero.png" alt="Dashboard Preview" width="100%" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
 </div>
 
 ---
 
-## ⚡ Why Smart RFP?
+## 📋 Overview
 
-Procurement teams are drowning in PDFs. **Smart RFP** parses them for you.
+**Smart RFP System** transforms manual, error-prone procurement processes into instant, data-driven decisions using state-of-the-art AI. Upload vendor proposal PDFs and let AI automatically extract, compare, and visualize contractor data—no manual data entry required.
 
-*   🤖 **Zero Data Entry**: Drag, drop, and let AI extract costs, timelines, and credentials.
-*   ⚖️ **True Comparisons**: Don't just compare prices. Compare *value* against your unique requirements.
-*   📊 **Visual Insights**: See the winners clearly with radar charts and dynamic scoring tables.
-
----
-
-## 🎥 Demo
-
-> **Watch the full walkthrough of the Smart RFP System in action!**
-
-<div align="center">
-  <a href="https://drive.google.com/file/d/1p7Qom6bnGoPnj_k_okydY2Aqj_r7k1W0/view?usp=sharing">
-    <img src="https://img.shields.io/badge/▶_Watch_Full_Demo-4285F4?style=for-the-badge&logo=google-drive&logoColor=white" alt="Watch Demo on Google Drive" />
-  </a>
-  &nbsp;&nbsp;
-  <a href="https://drive.google.com/drive/folders/1K_I2kzRI2K7DYkH4y7h7mbCGqcxh-NzW?usp=sharing">
-    <img src="https://img.shields.io/badge/📸_View_Screenshots-34A853?style=for-the-badge&logo=google-drive&logoColor=white" alt="View Screenshots" />
-  </a>
-</div>
+```mermaid
+flowchart LR
+    subgraph INPUT["📥 Input"]
+        A[Upload RFP] --> B[Upload Proposals]
+    end
+    
+    subgraph AI["🤖 AI Processing"]
+        B --> C[PDF Extraction]
+        C --> D[Data Analysis]
+    end
+    
+    subgraph OUTPUT["📊 Output"]
+        D --> E[Comparison Matrix]
+        D --> F[Visual Reports]
+        D --> G[AI Chat]
+    end
+```
 
 ---
 
-## 🎨 Key Features
+## ✨ Key Features
 
 | Feature | Description |
-| :--- | :--- |
-| **📄 AI-Powered PDF Extraction** | Upload vendor proposal PDFs and let AI automatically extract contractor details, pricing, timelines, experience, materials, warranties, and line-item breakdowns. |
-| **📋 Dynamic Proposal Forms** | AI discovers the RFP's proposal form structure (columns, sections) and extracts matching data from each vendor's submission for apples-to-apples comparison. |
-| **💬 Proposal Chat Assistant** | Ask questions about any proposal using natural language. The AI has full context of the vendor bid form, proposal details, and RFP requirements. |
-| **⚖️ Side-by-Side Comparison Matrix** | Compare vendor bids line-by-line with automatic column classification (fixed vs. vendor-specific) and grand total calculations. |
-| **� Visual Analytics & Reports** | Generate Radar charts, Bar charts, and scoring tables to visualize the "Best Fit" vendor across multiple dimensions. |
-| **🚀 RFP Lifecycle Dashboard** | Track Open RFPs, Draft proposals, Saved Comparisons, and recent activity all in one clean dashboard. |
+|---------|-------------|
+| **📄 AI PDF Extraction** | Automatically extract contractor details, pricing, timelines, experience, materials, warranties, and line-item breakdowns from proposal PDFs |
+| **📋 Dynamic Form Discovery** | AI discovers RFP proposal form structure and extracts matching data from each vendor for apples-to-apples comparison |
+| **💬 Proposal Chat Assistant** | Ask natural language questions about any proposal with full context of vendor data and RFP requirements |
+| **⚖️ Comparison Matrix** | Side-by-side vendor comparison with automatic column classification and grand total calculations |
+| **📊 Visual Analytics** | Radar charts, bar charts, and scoring tables to visualize the "Best Fit" vendor across multiple dimensions |
+| **🎯 RFP Lifecycle Dashboard** | Track Open RFPs, Drafts, Saved Comparisons, and recent activity in one unified interface |
 
 ---
 
-## 🛠️ The Stack
+## 🏗️ Architecture
 
-Built with performance and scalability in mind.
+```
+/RFP System
+├── backend/                    # Python/FastAPI backend
+│   ├── main.py                 # Application entrypoint
+│   ├── routers/                # API route handlers
+│   ├── services/               # Business logic layer
+│   │   ├── ingest/             # PDF extraction services
+│   │   └── review/             # AI review & scoring
+│   └── src/agents/             # AI agent components
+├── frontend/                   # React + Vite frontend
+│   ├── src/components/         # React components
+│   └── src/pages/              # Page components
+├── data/chromadb/              # Vector database for embeddings
+└── storage/proposals/          # Uploaded proposal PDFs
+```
 
-### **Frontend**
+> For complete architecture details, see [`docs/system-architecture.md`](docs/system-architecture.md)
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
 ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
-![ApexCharts](https://img.shields.io/badge/ApexCharts-FF4560?style=flat-square&logo=apexcharts&logoColor=white)
+![ApexCharts](https://img.shields.io/badge/ApexCharts-FF4560?style=flat-square)
 
-### **Backend**
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+### Backend
+![Python](https://img.shields.io/badge/Python_3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
-![AI Models](https://img.shields.io/badge/AI_Models-FF6F00?style=flat-square&logo=openai&logoColor=white)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F00?style=flat-square)
+
+### AI Models
+| Component | Model | Purpose |
+|-----------|-------|---------|
+| **Chat & Extraction** | `gpt-4o` | Structured data extraction, proposal chat |
+| **Embeddings** | `text-embedding-3-large` | Document vectorization (3072 dimensions) |
+| **Fallback** | Groq (optional) | Backup if OpenAI unavailable |
 
 ---
 
 ## 🚀 Quick Start
 
-Get up and running in minutes. See [WORKFLOW.md](WORKFLOW.md) for the full tour.
+### Prerequisites
+- **Node.js** v18+
+- **Python** v3.10+
+- **OpenAI API Key** (required)
 
-### 1. Backend (Python)
+### 1. Clone & Setup Backend
+
 ```bash
-# Create and activate virtual environment
+# Clone the repository
+git clone https://github.com/saim-honey388/smart-rfp-system.git
+cd smart-rfp-system
+
+# Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the server
+# Start the API server
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 2. Frontend (React)
+### 2. Setup Frontend
+
 ```bash
+# In a new terminal
 cd frontend
 npm install
 npm run dev
 ```
 
-### 3. Environment Setup (Required)
-Create a `.env` file in the project root with the following configuration:
+### 3. Configure Environment
+
+Create a `.env` file in the project root:
 
 ```bash
-# Required: OpenAI API Key
-OPENAI_API_KEY=your-openai-api-key-here
+# Database
+DATABASE_URL=sqlite:///./rfp.db
+STORAGE_PATH=storage
 
-# AI Model Configuration (defaults shown)
+# Required: OpenAI
+OPENAI_API_KEY=sk-your-key-here
 OPENAI_MODEL=gpt-4o
 OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 
-# Optional: Fallback to Groq if OpenAI unavailable
-GROQ_API_KEY=your-groq-api-key  # Optional fallback
-USE_FALLBACK_PROVIDER=false     # Set to 'true' to force fallback
+# Optional: Fallback
+GROQ_API_KEY=gsk-your-groq-key
+USE_FALLBACK_PROVIDER=false
 ```
 
 > [!IMPORTANT]
-> The system uses **OpenAI GPT-4o** for AI extraction and **text-embedding-3-large** for document embeddings. You must provide a valid `OPENAI_API_KEY` for the system to function.
+> A valid `OPENAI_API_KEY` is required for AI extraction and chat features.
+
+### 4. Access the Application
+
+| Service | URL |
+|---------|-----|
+| **Frontend** | http://localhost:5173 |
+| **API Docs** | http://localhost:8000/docs |
 
 ---
 
-## 📸 Gallery
+## 🎥 Demo
 
 <div align="center">
 
-| | |
-|:-------------------------:|:-------------------------:|
-| <img width="600" alt="Dashboard" src="docs/images/Dashboard Preview.png"> <br /> **Dashboard Overview** | <img width="600" alt="Open RFPs" src="docs/images/OPEN RFP_s.png"> <br /> **Open RFPs** |
-| <img width="600" alt="AI Extracted RFP" src="docs/images/AI extracted RFP.png"> <br /> **AI-Extracted RFP Details** | <img width="600" alt="Empty RFP" src="docs/images/Empty RFP.png"> <br /> **Create New RFP** |
-| <img width="600" alt="Proposal Upload" src="docs/images/Proposal Upload.png"> <br /> **Proposal Upload** | <img width="600" alt="Vendor Proposal" src="docs/images/Vendor Submitted Proposal.png"> <br /> **Vendor Submitted Proposal** |
-| <img width="600" alt="Dimension Selector" src="docs/images/ AI extracted  Dimensions Comparison Selector.png"> <br /> **AI Comparison Dimensions** | <img width="600" alt="Comparison Report" src="docs/images/Comparison Report.png"> <br /> **Comparison Report** |
+[![Watch Demo](https://img.shields.io/badge/▶_Watch_Full_Demo-4285F4?style=for-the-badge&logo=google-drive&logoColor=white)](https://drive.google.com/file/d/1p7Qom6bnGoPnj_k_okydY2Aqj_r7k1W0/view?usp=sharing)
+[![View Screenshots](https://img.shields.io/badge/📸_View_Screenshots-34A853?style=for-the-badge&logo=google-drive&logoColor=white)](https://drive.google.com/drive/folders/1K_I2kzRI2K7DYkH4y7h7mbCGqcxh-NzW?usp=sharing)
+
+</div>
+
+### Screenshots
+
+<div align="center">
+
+| Dashboard | RFP Management |
+|:---------:|:--------------:|
+| <img width="400" alt="Dashboard" src="docs/images/Dashboard Preview.png"> | <img width="400" alt="Open RFPs" src="docs/images/OPEN RFP_s.png"> |
+
+| AI Extraction | Comparison Report |
+|:-------------:|:-----------------:|
+| <img width="400" alt="AI Extracted" src="docs/images/AI extracted RFP.png"> | <img width="400" alt="Comparison" src="docs/images/Comparison Report.png"> |
 
 </div>
 
 ---
 
-## 📞 Contact
+## 📖 Documentation
 
-**Saim Khalid**
-*   Email: [saim.khalid983@gmail.com](mailto:saim.khalid983@gmail.com)
-*   GitHub: [saim-honey388](https://github.com/saim-honey388)
+| Document | Description |
+|----------|-------------|
+| [**WORKFLOW.md**](WORKFLOW.md) | Complete user journey and demo walkthrough |
+| [**System Architecture**](docs/system-architecture.md) | Technical architecture, data models, and API endpoints |
 
 ---
+
+## 🔌 API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/rfps` | List all RFPs |
+| `POST` | `/api/rfps` | Create new RFP |
+| `POST` | `/api/rfps/upload` | Upload RFP PDF |
+| `POST` | `/api/proposals/upload` | Upload proposal PDF |
+| `POST` | `/api/proposals/{id}/approve` | Approve proposal |
+| `POST` | `/api/proposals/{id}/reject` | Reject proposal |
+| `GET` | `/api/proposals/{rfp_id}/matrix` | Get comparison matrix |
+| `POST` | `/api/chat/proposal` | Chat about a proposal |
+
+> Full API documentation available at `http://localhost:8000/docs` when running locally.
+
+---
+
+## 📞 Contact
+
+**Saim Khalid** – [saim.khalid983@gmail.com](mailto:saim.khalid983@gmail.com)
+
+[![GitHub](https://img.shields.io/badge/GitHub-saim--honey388-181717?style=flat-square&logo=github)](https://github.com/saim-honey388)
+
+---
+
+<div align="center">
+
+*Streamlining procurement decisions with intelligent automation*
+
+</div>
