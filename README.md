@@ -23,13 +23,7 @@
 
 ## 📋 Overview
 
-**Procurement teams spend countless hours manually reviewing vendor proposals, extracting data into spreadsheets, and struggling to make fair comparisons.** The Smart RFP System eliminates this pain by leveraging AI to automate the entire proposal evaluation lifecycle.
-
-- 🔍 **Upload any RFP PDF** → AI extracts requirements, deadlines, and proposal form structures
-- 📤 **Vendors submit proposals** → AI automatically parses pricing, timelines, experience, materials, and warranties
-- ⚖️ **Compare intelligently** → Dynamic comparison matrices align vendor data row-by-row against RFP requirements
-- 💬 **Chat with proposals** → Ask natural language questions about any vendor submission
-- 📊 **Decide with confidence** → Visual reports, radar charts, and AI-scored rankings surface the best-fit vendor
+**Smart RFP System** transforms manual, error-prone procurement processes into instant, data-driven decisions using state-of-the-art AI. Upload vendor proposal PDFs and let AI automatically extract, compare, and visualize contractor data—no manual data entry required.
 
 ```mermaid
 flowchart TB
