@@ -41,11 +41,11 @@ flowchart TB
     end
 
     subgraph EXTRACT["🤖 AI Extraction Engine"]
-        RFP --> SCHEMA[Discover Form Schema]
+        RFP --> SCHEMA[Extract Info and Submission Form Schema]
         PROP1 --> PARSE1[Extract Pricing and Terms]
         PROP2 --> PARSE2[Extract Pricing and Terms]
         PROP3 --> PARSE3[Extract Pricing and Terms]
-        SCHEMA --> ALIGN[Align Vendor Data to Schema]
+        SCHEMA --> ALIGN[Align Vendor Data to RFP Schema]
         PARSE1 --> ALIGN
         PARSE2 --> ALIGN
         PARSE3 --> ALIGN
