@@ -1,134 +1,230 @@
-# RFP AI Review System Blueprint
+# Smart RFP System - System Architecture
 
-This document describes the proposed web app, the end‑to‑end pipeline, and the planned file structure (what lives where and why). It is implementation-agnostic enough to adapt to different stacks, but concrete on responsibilities.
+This document describes the system architecture, directory structure, and data flow of the Smart RFP System.
+
+---
 
 ## Goals
-- Let requestors upload/create RFPs and deadlines.
-- Let contractors submit proposals (files + structured fields).
-- Run AI-assisted review: extraction, price comparison, scope alignment, clarity checks, dates, and overall assessment.
-- Summarize proposals side by side for decisions (approve, reject with email, or auto-expire).
-- After a proposal is selected, enable a lightweight chat for the requestor to ask questions about that proposal using the AI context.
-- Keep outputs auditable: store prompts, model outputs, extracted facts, and decisions.
+- Let requestors upload/create RFPs with requirements and deadlines
+- Let contractors submit proposals (PDF files + structured fields)
+- AI-powered extraction: automatically parse PDFs for pricing, timelines, experience, materials, warranties
+- AI-powered chat: ask questions about any proposal with full context
+- Side-by-side vendor comparison with dynamic column classification
+- Visual analytics with radar charts and scoring tables
+- Automated pipeline: review, compare, approve/reject, and notify
 
-## High-level workflow
-1) Requestor creates or uploads an RFP, sets an expiry window.
-2) Contractors submit proposals.
-3) Background pipeline:
-   - Ingest files → extract text/OCR → normalize numbers/dates.
-   - AI analyses per proposal (price, scope match, clarity, dates, overall).
-   - Store findings + structured fields.
-4) Cross-proposal compare table is generated for the RFP.
-5) Requestor decides:
-   - Approve → hand off to negotiation workflow.
-   - Reject → contractor notified by email with reasons.
-   - Let expire → auto-expire at deadline, send notices.
+---
 
-## Planned repository layout (simple stack: Python + SQLite + server-rendered HTML)
+## Directory Structure
+
 ```
-/apps
-  /web                 # Frontend (server-rendered templates + minimal JS)
-    templates/         # HTML templates (Jinja2)
-    static/            # CSS/JS assets (vanilla JS; no React)
-    forms.py|ts        # Server-side form handling/helpers
-  /api                 # Backend HTTP API (FastAPI + SQLite)
-    main.py            # API entrypoint
-    routers/           # Route modules (rfps, proposals, reviews, auth, chat)
-    schemas/           # Pydantic/DTOs for requests & responses
-    services/          # Business logic layer (RFP, proposal, review)
-    models/            # ORM models and migrations
-    workers/           # Background job consumers
-    config/            # Settings, env loading
-    tests/             # API unit/integration tests
-/services
-  /ingest              # File ingest & text extraction
-    extractor.py|ts    # PDF/OCR, mime handling, chunking
-    parser.py|ts       # Price/date/unit parsing & normalization
-    tests/
-  /review              # AI prompts, model calls, scoring logic
-    prompts/           # Prompt templates (price, scope, clarity, dates, summary)
-    llm_client.py|ts   # Model wrapper with retries, safety
-    scorer.py|ts       # Coverage %, risk scoring, aggregation
-    comparator.py|ts   # Cross-proposal table builder
-    tests/
-/jobs                  # Scheduled jobs (expiry sweeps, reminders)
-  expire.py|ts         # Auto-expire proposals/RFPs and notify
-  reminders.py|ts      # Reminder emails pre-deadline
-/infra
-  scripts/             # Local dev tooling (format, lint, db reset); no Docker
-/docs
-  system-architecture.md  # (this doc) overview, pipeline, layout
-  api-contracts.md        # REST/GraphQL/OpenAPI stubs & payloads
-  prompts.md              # Prompt shapes, guardrails, schema expectations
-  data-model.md           # ERD, tables, field definitions
-/tests
-  e2e/                   # End-to-end tests across web/api/workers
-  fixtures/              # Sample RFPs & proposals for tests
+/RFP System
+├── backend/                    # All backend code (Python/FastAPI)
+│   ├── main.py                 # FastAPI application entrypoint
+│   ├── config/
+│   │   └── settings.py         # Environment and configuration
+│   ├── models/
+│   │   ├── db.py               # SQLite database connection
+│   │   └── entities.py         # SQLAlchemy ORM models
+│   ├── routers/                # API route handlers
+│   │   ├── rfps.py             # RFP CRUD endpoints
+│   │   ├── proposals.py        # Proposal upload & management
+│   │   ├── comparisons.py      # Saved comparison endpoints
+│   │   ├── chat.py             # Proposal chat endpoints
+│   │   ├── analysis.py         # AI analysis endpoints
+│   │   └── reviews.py          # Review & scoring endpoints
+│   ├── schemas/                # Pydantic request/response models
+│   │   ├── rfp.py
+│   │   ├── proposal.py
+│   │   ├── chat.py
+│   │   └── review.py
+│   ├── services/               # Business logic layer
+│   │   ├── rfp_service.py      # RFP operations
+│   │   ├── proposal_service.py # Proposal operations
+│   │   ├── chat_service.py     # AI chat with proposals
+│   │   ├── review_service.py   # AI review & scoring
+│   │   ├── report_generator.py # Excel/report generation
+│   │   ├── column_classifier.py # Matrix column classification
+│   │   ├── ingest/             # PDF extraction services
+│   │   │   ├── extractor.py    # PDF text extraction
+│   │   │   ├── parser.py       # Email/data parsing
+│   │   │   ├── ai_extractor.py # AI-powered detail extraction
+│   │   │   ├── rfp_extractor.py # RFP metadata extraction
+│   │   │   └── prompts/        # Extraction prompt templates
+│   │   └── review/
+│   │       └── prompts/        # Review prompt templates
+│   └── src/
+│       ├── agents/             # AI agent components
+│       │   ├── form_structure_analyzer.py  # Discover proposal form schema
+│       │   ├── vendor_data_extractor.py    # Extract vendor bid form data
+│       │   ├── comparison_matrix_builder.py # Build comparison matrices
+│       │   ├── form_generator.py           # Generate blank forms
+│       │   ├── bid_estimator.py            # Price estimation
+│       │   ├── rfp_architect.py            # RFP requirement generation
+│       │   └── ingestion.py                # ChromaDB document ingestion
+│       └── utils/
+│           ├── ai_client.py    # Unified AI client (OpenAI/Groq fallback)
+│           ├── embeddings.py   # Text embedding functions
+│           └── llm_client.py   # LLM completion wrapper
+├── frontend/                   # React + Vite frontend
+│   ├── src/
+│   │   ├── components/         # React components
+│   │   ├── context/            # React context (RFPContext)
+│   │   ├── pages/              # Page components
+│   │   └── App.jsx             # Main application
+│   └── package.json
+├── data/                       # Local data storage
+│   └── chromadb/               # Vector database for embeddings
+├── storage/                    # File storage
+│   └── proposals/              # Uploaded proposal PDFs
+├── jobs/                       # Scheduled background jobs
+│   ├── expire.py               # Auto-expire RFPs
+│   └── reminders.py            # Deadline reminders
+├── docs/                       # Documentation
+├── .env                        # Environment variables
+├── requirements.txt            # Python dependencies
+├── rfp.db                      # SQLite database
+├── README.md
+└── WORKFLOW.md
 ```
 
-## What goes in key files
-- `apps/web/pages/`: RFP list/detail, proposal detail/review pages, decision panel routes.
-- `apps/web/components/`: `RfpForm`, `ProposalUpload`, `ComparisonTable`, `FindingCard`, `DecisionPanel`, `StatusBadge`.
-- `apps/web/lib/`: API SDK, SWR/react-query hooks, currency/date formatters, feature flags.
-- `apps/api/routers/`: CRUD for RFPs/proposals, trigger review, fetch comparison results, decisions, auth.
-- `apps/api/services/`: Orchestrate ingest + review jobs, enforce status transitions, send notifications.
-- `apps/api/workers/`: Queue consumers that call `/services/ingest` and `/services/review`, persist outputs.
-- `services/ingest/extractor.*`: Read PDFs, OCR if needed, chunk text, extract raw text.
-- `services/ingest/parser.*`: Structured extraction (prices, dates, milestones), currency normalization.
-- `services/review/prompts/`: Prompt templates per check (price, scope, clarity, dates, overall summary) with JSON schema outputs.
-- `services/review/llm_client.*`: Model invocation, retries, rate limits, safety filters.
-- `services/review/scorer.*`: Requirement coverage %, risk scoring, aggregation of findings.
-- `services/review/comparator.*`: Build cross-proposal comparison rows and deltas vs RFP targets.
-- `jobs/expire.*`: Sweep expired RFPs/proposals; update status, send emails.
-- `jobs/reminders.*`: Pre-deadline reminders to contractors/requestor.
-- `docs/api-contracts.md`: Endpoint list, payloads, status codes, webhooks if any.
-- `docs/prompts.md`: Canonical prompts, expected JSON schema, fallback/guardrail rules.
-- `docs/data-model.md`: Tables/entities (RFP, Proposal, Contractor, ReviewRun, Finding, Decision, Notification).
+---
 
-## End-to-end pipeline (data flow)
-1) **RFP creation**: Store RFP, requirements list, budget, deadlines; schedule expiry job.
-2) **Proposal submission**: Accept file(s) + metadata; enqueue ingest job.
-3) **Ingest** (worker):
-   - Fetch file from storage.
-   - Extract text (PDF/OCR), chunk for context.
-   - Parse key fields: price (normalize currency/unit), dates, milestones.
-   - Persist extracted text + structured fields.
-   - Enqueue review job.
-4) **AI review** (worker):
-   - Load RFP requirements and proposal extracted text.
-   - Run prompt set:
-     - Price check: compare to budget/peers.
-     - Scope alignment: per-requirement coverage with gaps/overreach.
-     - Definition clarity: ambiguous/undefined terms, contradictions.
-     - Dates: start date viability vs RFP constraints.
-     - Overall assessment: summary + scorecard (fit, risk, value).
-   - Validate outputs against schemas; persist findings and scores.
-   - Trigger comparison build.
-5) **Comparison build**:
-   - Aggregate proposals for the RFP.
-   - Compute deltas (price vs target/median), coverage %, risk flags, earliest viable start date.
-   - Store comparison snapshot for the UI.
-6) **Decision**:
-   - Requestor approves/rejects/lets expire.
-   - Approve → mark status, hand off to negotiation (e.g., export package/webhook).
-   - Reject → send email with summarized reasons.
-   - Expire → scheduled job sets status, sends emails.
-7) **Chat on selected proposal**:
-   - After approval/selection, provide a chat interface.
-   - Ground responses on the selected proposal, its AI findings, and the RFP context (retrieval-augmented).
-   - No external cloud dependencies; run the model via local or hosted API as available.
-8) **Auditability**:
-   - Store prompts, model outputs, normalized fields, and decisions with timestamps and actors.
+## AI Models & Configuration
 
-## Non-functional notes
-- Keep stack simple: FastAPI (or Flask) + SQLite + minimal React/Vite or server-rendered templates.
-- No Docker/cloud: run locally with venv/poetry/pip and a local SQLite db; file storage on disk.
-- Use a lightweight task runner (thread/async queue) for ingest/review to keep uploads snappy.
-- Keep prompt+schema versions to make outputs reproducible.
-- Add PII safety filters and rate limiting on model calls.
-- Include fixtures for deterministic e2e and worker tests.
+| Component | Model | Purpose |
+|-----------|-------|---------|
+| **Chat & Extraction** | `gpt-4o` | Structured data extraction, proposal chat |
+| **Embeddings** | `text-embedding-3-large` | Document vectorization (3072 dimensions) |
+| **Fallback** | Groq (optional) | Backup if OpenAI unavailable |
 
-## Quick start (future)
-- `python -m venv .venv && source .venv/bin/activate`
-- `pip install -r requirements.txt`
-- `uvicorn apps.api.main:app --reload` (API) and `npm install && npm run dev` (web) if using React; or serve templates directly from FastAPI for simpler setup.
+Environment variables (`.env`):
+```bash
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+GROQ_API_KEY=gsk-...  # Optional fallback
+USE_FALLBACK_PROVIDER=false
+```
 
+---
+
+## Data Flow Pipeline
+
+```mermaid
+flowchart TB
+    subgraph INPUT["1. Input"]
+        RFP[RFP Created] --> UPLOAD[PDF Uploaded]
+    end
+
+    subgraph INGEST["2. Ingestion"]
+        UPLOAD --> EXTRACT[Extract Text]
+        EXTRACT --> EMBED[Create Embeddings]
+        EMBED --> CHROMA[(ChromaDB)]
+    end
+
+    subgraph ANALYZE["3. AI Analysis"]
+        CHROMA --> SCHEMA[Discover Form Schema]
+        SCHEMA --> VALUES[Extract Vendor Values]
+        VALUES --> DB[(SQLite DB)]
+    end
+
+    subgraph INTERACT["4. User Interaction"]
+        DB --> CHAT[Proposal Chat]
+        DB --> COMPARE[Comparison Matrix]
+        DB --> REPORT[Generate Reports]
+    end
+
+    subgraph OUTPUT["5. Decisions"]
+        COMPARE --> ACCEPT[Accept Proposal]
+        COMPARE --> REJECT[Reject Proposal]
+        ACCEPT --> NOTIFY[Send Notifications]
+        REJECT --> NOTIFY
+    end
+```
+
+---
+
+## Key Data Models
+
+### RFP (Request for Proposal)
+```python
+RfpModel:
+    id: str (UUID)
+    title: str
+    description: str
+    budget: int
+    deadline: date
+    status: str  # "draft" | "open" | "closed"
+    requirements: JSON  # [{id, text}]
+    proposal_form_schema: JSON  # Discovered form structure
+    proposal_form_rows: JSON    # Line items from RFP
+```
+
+### Proposal
+```python
+ProposalModel:
+    id: str (UUID)
+    rfp_id: str (FK)
+    contractor: str
+    price: float
+    status: str  # "submitted" | "Accepted" | "Rejected"
+    extracted_text: str
+    
+    # AI-extracted fields (JSON arrays)
+    experience: List[str]
+    materials: List[str]
+    timeline: List[str]
+    warranty: List[str]
+    cost_breakdown: List[str]
+    
+    # Vendor bid form data
+    proposal_form_data: JSON  # [{item_id, description, quantity, unit_cost, total, ...}]
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/rfps` | List all RFPs |
+| `POST` | `/api/rfps` | Create new RFP |
+| `POST` | `/api/rfps/upload` | Upload RFP PDF |
+| `GET` | `/api/proposals` | List proposals |
+| `POST` | `/api/proposals/upload` | Upload proposal PDF |
+| `POST` | `/api/proposals/{id}/approve` | Approve proposal |
+| `POST` | `/api/proposals/{id}/reject` | Reject proposal |
+| `GET` | `/api/proposals/{rfp_id}/matrix` | Get comparison matrix |
+| `POST` | `/api/chat/proposal` | Chat about a proposal |
+| `GET` | `/api/comparisons` | List saved comparisons |
+| `POST` | `/api/comparisons` | Save comparison |
+
+---
+
+## Non-Functional Requirements
+
+- **Simple Stack**: FastAPI + SQLite + React/Vite
+- **Local First**: No Docker required, runs with Python venv
+- **AI Fallback**: Automatic failover from OpenAI to Groq
+- **Rate Limiting**: Built-in protections for API calls
+- **Auditability**: Prompts and outputs stored with timestamps
+
+---
+
+## Quick Start
+
+```bash
+# Backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+Access at: http://localhost:5173

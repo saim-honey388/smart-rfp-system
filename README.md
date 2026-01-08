@@ -44,27 +44,32 @@ Procurement teams are drowning in PDFs. **Smart RFP** parses them for you.
 
 ---
 
-## � Demo
+## 🎥 Demo
 
 > **Watch the full walkthrough of the Smart RFP System in action!**
 
 <div align="center">
-  <a href="https://drive.google.com/file/d/1GMgWgj_cmm80Xt4SbqCokQ7-sMXcWKos/view?usp=sharing">
-    <img src="https://img.shields.io/badge/▶_Watch_Demo-4285F4?style=for-the-badge&logo=google-drive&logoColor=white" alt="Watch Demo on Google Drive" />
+  <a href="https://drive.google.com/file/d/1p7Qom6bnGoPnj_k_okydY2Aqj_r7k1W0/view?usp=sharing">
+    <img src="https://img.shields.io/badge/▶_Watch_Full_Demo-4285F4?style=for-the-badge&logo=google-drive&logoColor=white" alt="Watch Demo on Google Drive" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://drive.google.com/drive/folders/1K_I2kzRI2K7DYkH4y7h7mbCGqcxh-NzW?usp=sharing">
+    <img src="https://img.shields.io/badge/📸_View_Screenshots-34A853?style=for-the-badge&logo=google-drive&logoColor=white" alt="View Screenshots" />
   </a>
 </div>
 
 ---
 
-## �🎨 Key Features
+## 🎨 Key Features
 
 | Feature | Description |
 | :--- | :--- |
-| **📄 PDF Extraction** | Instantly parse messy vendor proposals into structured JSON. |
-| **🧠 Intelligent Scoring** | Vendors are graded (0-100) on custom dimensions like *Security* or *Sustainability*. |
-| **📈 Dynamic Reports** | Generate beautiful Radar & Bar charts to visualize the "Best Fit" vendor. |
-| **🚀 Real-Time Dashboard** | Track all your open RFPs, active bids, and draft projects in one place. |
-| **🔒 Role-Based Access** | Secure environment for sensitive procurement data. |
+| **📄 AI-Powered PDF Extraction** | Upload vendor proposal PDFs and let AI automatically extract contractor details, pricing, timelines, experience, materials, warranties, and line-item breakdowns. |
+| **📋 Dynamic Proposal Forms** | AI discovers the RFP's proposal form structure (columns, sections) and extracts matching data from each vendor's submission for apples-to-apples comparison. |
+| **💬 Proposal Chat Assistant** | Ask questions about any proposal using natural language. The AI has full context of the vendor bid form, proposal details, and RFP requirements. |
+| **⚖️ Side-by-Side Comparison Matrix** | Compare vendor bids line-by-line with automatic column classification (fixed vs. vendor-specific) and grand total calculations. |
+| **� Visual Analytics & Reports** | Generate Radar charts, Bar charts, and scoring tables to visualize the "Best Fit" vendor across multiple dimensions. |
+| **🚀 RFP Lifecycle Dashboard** | Track Open RFPs, Draft proposals, Saved Comparisons, and recent activity all in one clean dashboard. |
 
 ---
 
